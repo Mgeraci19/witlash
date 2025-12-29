@@ -46,7 +46,7 @@ export default function Home() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center text-3xl font-bold">Witlash</CardTitle>
+          <CardTitle className="text-center text-3xl font-bold">SmackTalk</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">

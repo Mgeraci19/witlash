@@ -1,6 +1,6 @@
-# Witlash
+# SmackTalk
 
-**Witlash** is a multiplayer party game inspired by Jackbox's *Quiplash*. Players answer prompts with witty responses and vote on their favorites in a tournament-style battle.
+**SmackTalk** is a multiplayer party game inspired by Jackbox's *Quiplash*. Players answer prompts with witty responses and vote on their favorites in a tournament-style battle.
 
 ## Tech Stack
 -   **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS 4.
@@ -71,4 +71,4 @@ The frontend is automatically deployed to GitHub Pages via GitHub Actions when p
     `Settings > Secrets and variables > Actions > Variables`.
 
 3.  **Access**:
-    The live site is available at: `https://<username>.github.io/witlash`
+    The live site is available at: `https://<username>.github.io/smacktalk`
