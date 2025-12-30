@@ -40,10 +40,12 @@ type RevealPhase =
 /**
  * BattleArena - Phased battle display
  *
+ * Layout: Avatars on far left/right, answers in center (stacked → side by side)
+ *
  * Flow:
- * 1. Answers slam into center (anonymous, randomized order)
+ * 1. Answers slam into center (anonymous, randomized order, stacked)
  * 2. Players vote
- * 3. Answers slide to their fighter sides (reveal who wrote what)
+ * 3. Answers slide to sides at same height (reveal who wrote what)
  * 4. Vote counts tick up, winner highlighted
  * 5. Quick attack animation
  */
@@ -61,6 +63,8 @@ export function BattleArena({
   const arenaRef = useRef<HTMLDivElement>(null);
   const answer1Ref = useRef<HTMLDivElement>(null);
   const answer2Ref = useRef<HTMLDivElement>(null);
+  const leftAnswerAreaRef = useRef<HTMLDivElement>(null);
+  const rightAnswerAreaRef = useRef<HTMLDivElement>(null);
 
   // Phase tracking
   const [phase, setPhase] = useState<RevealPhase>("waiting");
@@ -179,31 +183,51 @@ export function BattleArena({
 
     const timeline = gsap.timeline();
 
-    // Calculate slide positions
-    const arenaWidth = arenaRef.current?.offsetWidth || 800;
-    const slideDistance = arenaWidth / 3;
-
-    // Phase: Sliding
+    // Phase: Sliding - move answers to their side areas
     setPhase("sliding");
 
-    // Slide answers to their sides
-    const leftAnswerRef = answerOrder.first === "left" ? answer1Ref : answer2Ref;
-    const rightAnswerRef = answerOrder.first === "right" ? answer1Ref : answer2Ref;
+    // Get positions for sliding
+    const leftArea = leftAnswerAreaRef.current;
+    const rightArea = rightAnswerAreaRef.current;
+    const answer1 = answer1Ref.current;
+    const answer2 = answer2Ref.current;
 
-    timeline.to(leftAnswerRef.current, {
-      x: -slideDistance,
-      duration: 0.5,
-      ease: "power2.out",
-    }, 0);
+    if (leftArea && rightArea && answer1 && answer2) {
+      const leftAreaRect = leftArea.getBoundingClientRect();
+      const rightAreaRect = rightArea.getBoundingClientRect();
+      const answer1Rect = answer1.getBoundingClientRect();
+      const answer2Rect = answer2.getBoundingClientRect();
 
-    timeline.to(rightAnswerRef.current, {
-      x: slideDistance,
-      duration: 0.5,
-      ease: "power2.out",
-    }, 0);
+      // Determine which answer goes where
+      const leftAnswerEl = answerOrder.first === "left" ? answer1 : answer2;
+      const rightAnswerEl = answerOrder.first === "right" ? answer1 : answer2;
+      const leftAnswerRect = answerOrder.first === "left" ? answer1Rect : answer2Rect;
+      const rightAnswerRect = answerOrder.first === "right" ? answer1Rect : answer2Rect;
+
+      // Calculate target positions (center of each area)
+      const leftTargetX = leftAreaRect.left + leftAreaRect.width / 2 - leftAnswerRect.left - leftAnswerRect.width / 2;
+      const leftTargetY = leftAreaRect.top + leftAreaRect.height / 2 - leftAnswerRect.top - leftAnswerRect.height / 2;
+      const rightTargetX = rightAreaRect.left + rightAreaRect.width / 2 - rightAnswerRect.left - rightAnswerRect.width / 2;
+      const rightTargetY = rightAreaRect.top + rightAreaRect.height / 2 - rightAnswerRect.top - rightAnswerRect.height / 2;
+
+      // Slide both answers simultaneously
+      timeline.to(leftAnswerEl, {
+        x: leftTargetX,
+        y: leftTargetY,
+        duration: 0.6,
+        ease: "power2.out",
+      }, 0);
+
+      timeline.to(rightAnswerEl, {
+        x: rightTargetX,
+        y: rightTargetY,
+        duration: 0.6,
+        ease: "power2.out",
+      }, 0);
+    }
 
     // Pause for "who wrote that?!" reaction
-    timeline.to({}, { duration: 1 });
+    timeline.to({}, { duration: 1.2 });
 
     // Phase: Revealing votes
     timeline.call(() => setPhase("revealing"));
@@ -285,151 +309,155 @@ export function BattleArena({
 
   const showVotes = phase === "revealing" || phase === "attacking" || phase === "complete";
   const showWinner = phase === "attacking" || phase === "complete";
+  const isSlid = phase === "sliding" || phase === "revealing" || phase === "attacking" || phase === "complete";
 
   return (
     <div
       ref={arenaRef}
-      className="relative w-full max-w-6xl mx-auto"
+      className="relative w-full h-full flex"
       data-phase={phase}
     >
-      {/* Avatars Row */}
-      <div className="flex items-center justify-between gap-4 mb-12">
-        {/* Left Fighter */}
-        <div className="flex-1 flex flex-col items-center">
-          <AvatarFighter
-            ref={leftFighterRef}
-            name={leftBattler.name}
-            avatar={leftBattler.avatar}
-            side="left"
-            state={leftState}
-            isWinner={showWinner && leftBattler.isWinner}
-            size="large"
-          />
-        </div>
-
-        {/* VS Badge */}
+      {/* Left Side: Avatar + Answer landing zone */}
+      <div className="flex flex-col items-center justify-center w-1/4 px-4">
+        <AvatarFighter
+          ref={leftFighterRef}
+          name={leftBattler.name}
+          avatar={leftBattler.avatar}
+          side="left"
+          state={leftState}
+          isWinner={showWinner && leftBattler.isWinner}
+          size="large"
+        />
+        {/* Answer landing zone */}
         <div
-          className="text-5xl font-bold text-red-500 px-6"
+          ref={leftAnswerAreaRef}
+          className="mt-4 w-full min-h-[120px] flex items-center justify-center"
+        >
+          {/* Votes display when slid */}
+          {isSlid && showVotes && (
+            <div className={`text-center ${showWinner && leftBattler.isWinner ? "text-yellow-400" : "text-gray-400"}`}>
+              <div className="text-3xl font-bold">{displayedVotes.left}</div>
+              <div className="text-sm">vote{displayedVotes.left === 1 ? "" : "s"}</div>
+              {leftBattler.voters.length > 0 && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {leftBattler.voters.join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Center: Answers (stacked, then slide out) */}
+      <div className="flex-1 flex flex-col items-center justify-center relative">
+        {/* VS Badge - only visible during early phases */}
+        <div
+          className="text-6xl font-bold text-red-500 mb-8"
           style={{
             textShadow: "0 0 20px rgba(255,0,0,0.5)",
             fontFamily: "'Impact', 'Arial Black', sans-serif",
-            opacity: phase === "waiting" || phase === "slam1" || phase === "slam2" || phase === "voting" ? 1 : 0.3,
+            opacity: phase === "waiting" || phase === "slam1" || phase === "slam2" || phase === "voting" ? 1 : 0,
+            transition: "opacity 0.3s",
           }}
         >
           VS
         </div>
 
-        {/* Right Fighter */}
-        <div className="flex-1 flex flex-col items-center">
-          <AvatarFighter
-            ref={rightFighterRef}
-            name={rightBattler.name}
-            avatar={rightBattler.avatar}
-            side="right"
-            state={rightState}
-            isWinner={showWinner && rightBattler.isWinner}
-            size="large"
-          />
-        </div>
-      </div>
-
-      {/* Answers Area - Start centered, slide to sides on reveal */}
-      <div className="relative min-h-[200px]">
-        {/* First Answer (randomized) */}
-        <div
-          ref={answer1Ref}
-          className={`
-            absolute left-1/2 -translate-x-1/2
-            w-full max-w-lg
-            rounded-xl p-6 mb-4
-            transition-all duration-300
-            ${showWinner && firstAnswer?.isWinner
-              ? "bg-green-900/50 ring-2 ring-yellow-400"
-              : showWinner && !firstAnswer?.isWinner
-              ? "bg-gray-800/50 opacity-70"
-              : "bg-gray-800"
-            }
-          `}
-          style={{
-            top: 0,
-            opacity: 0,
-            transform: "translateX(-50%) scale(0.5)"
-          }}
-        >
-          <div className="text-xl text-white text-center">{firstAnswer?.answer}</div>
-
-          {showVotes && (
-            <div className={`text-center mt-3 text-2xl font-bold ${
-              showWinner && firstAnswer?.isWinner ? "text-yellow-400" : "text-gray-400"
-            }`}>
-              {answerOrder.first === "left" ? displayedVotes.left : displayedVotes.right}
-              {" "}vote{(answerOrder.first === "left" ? displayedVotes.left : displayedVotes.right) === 1 ? "" : "s"}
+        {/* Stacked Answers Container */}
+        <div className="relative w-full max-w-2xl">
+          {/* First Answer (randomized) */}
+          <div
+            ref={answer1Ref}
+            className={`
+              w-full
+              rounded-xl p-6 mb-6
+              transition-all duration-300
+              ${showWinner && firstAnswer?.isWinner
+                ? "bg-green-900/50 ring-2 ring-yellow-400"
+                : showWinner && !firstAnswer?.isWinner
+                ? "bg-gray-800/50 opacity-70"
+                : "bg-gray-800"
+              }
+            `}
+            style={{
+              opacity: 0,
+              transform: "scale(0.5)"
+            }}
+          >
+            <div className="text-3xl text-white text-center font-medium leading-relaxed">
+              {firstAnswer?.answer}
             </div>
-          )}
+          </div>
 
-          {showVotes && firstAnswer && firstAnswer.voters.length > 0 && (
-            <div className="mt-2 text-center">
-              <div className="text-xs text-gray-500">
-                {firstAnswer.voters.join(", ")}
-              </div>
+          {/* Second Answer (randomized) */}
+          <div
+            ref={answer2Ref}
+            className={`
+              w-full
+              rounded-xl p-6
+              transition-all duration-300
+              ${showWinner && secondAnswer?.isWinner
+                ? "bg-green-900/50 ring-2 ring-yellow-400"
+                : showWinner && !secondAnswer?.isWinner
+                ? "bg-gray-800/50 opacity-70"
+                : "bg-gray-800"
+              }
+            `}
+            style={{
+              opacity: 0,
+              transform: "scale(0.5)"
+            }}
+          >
+            <div className="text-3xl text-white text-center font-medium leading-relaxed">
+              {secondAnswer?.answer}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Second Answer (randomized) */}
-        <div
-          ref={answer2Ref}
-          className={`
-            absolute left-1/2 -translate-x-1/2
-            w-full max-w-lg
-            rounded-xl p-6
-            transition-all duration-300
-            ${showWinner && secondAnswer?.isWinner
-              ? "bg-green-900/50 ring-2 ring-yellow-400"
-              : showWinner && !secondAnswer?.isWinner
-              ? "bg-gray-800/50 opacity-70"
-              : "bg-gray-800"
-            }
-          `}
-          style={{
-            top: 120,
-            opacity: 0,
-            transform: "translateX(-50%) scale(0.5)"
-          }}
-        >
-          <div className="text-xl text-white text-center">{secondAnswer?.answer}</div>
-
-          {showVotes && (
-            <div className={`text-center mt-3 text-2xl font-bold ${
-              showWinner && secondAnswer?.isWinner ? "text-yellow-400" : "text-gray-400"
-            }`}>
-              {answerOrder.second === "left" ? displayedVotes.left : displayedVotes.right}
-              {" "}vote{(answerOrder.second === "left" ? displayedVotes.left : displayedVotes.right) === 1 ? "" : "s"}
+        {/* Status Text */}
+        <div className="mt-8">
+          {phase === "voting" && (
+            <div className="text-2xl text-gray-400 animate-pulse">
+              Players are voting...
             </div>
           )}
-
-          {showVotes && secondAnswer && secondAnswer.voters.length > 0 && (
-            <div className="mt-2 text-center">
-              <div className="text-xs text-gray-500">
-                {secondAnswer.voters.join(", ")}
-              </div>
+          {phase === "sliding" && (
+            <div className="text-xl text-gray-500">
+              Revealing authors...
             </div>
           )}
         </div>
       </div>
 
-      {/* Status Text */}
-      <div className="text-center mt-8">
-        {phase === "voting" && (
-          <div className="text-2xl text-gray-400 animate-pulse">
-            Players are voting...
-          </div>
-        )}
-        {phase === "sliding" && (
-          <div className="text-xl text-gray-500">
-            Revealing authors...
-          </div>
-        )}
+      {/* Right Side: Avatar + Answer landing zone */}
+      <div className="flex flex-col items-center justify-center w-1/4 px-4">
+        <AvatarFighter
+          ref={rightFighterRef}
+          name={rightBattler.name}
+          avatar={rightBattler.avatar}
+          side="right"
+          state={rightState}
+          isWinner={showWinner && rightBattler.isWinner}
+          size="large"
+        />
+        {/* Answer landing zone */}
+        <div
+          ref={rightAnswerAreaRef}
+          className="mt-4 w-full min-h-[120px] flex items-center justify-center"
+        >
+          {/* Votes display when slid */}
+          {isSlid && showVotes && (
+            <div className={`text-center ${showWinner && rightBattler.isWinner ? "text-yellow-400" : "text-gray-400"}`}>
+              <div className="text-3xl font-bold">{displayedVotes.right}</div>
+              <div className="text-sm">vote{displayedVotes.right === 1 ? "" : "s"}</div>
+              {rightBattler.voters.length > 0 && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {rightBattler.voters.join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

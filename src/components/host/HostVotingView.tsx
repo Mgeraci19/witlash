@@ -159,43 +159,50 @@ export function HostVotingView({ game }: HostVotingViewProps) {
       data-phase="VOTING"
       data-round-status={game.roundStatus}
       data-prompt-id={game.currentPromptId}
-      className="flex flex-col min-h-screen p-8"
+      className="flex flex-col min-h-screen p-4"
     >
-      {/* Health Bars at Top */}
-      <div className="flex justify-between items-start gap-8 mb-8">
-        {leftBattler?.player && (
-          <FighterHealthBar
-            name={leftBattler.player.name}
-            hp={animatedLeftHp ?? leftBattler.player.hp ?? 0}
-            maxHp={leftBattler.player.maxHp || 100}
-            side="left"
-            isWinner={battleComplete && leftBattler.isWinner}
-            avatar={leftBattler.player.avatar}
-          />
-        )}
-        {rightBattler?.player && (
-          <FighterHealthBar
-            name={rightBattler.player.name}
-            hp={animatedRightHp ?? rightBattler.player.hp ?? 0}
-            maxHp={rightBattler.player.maxHp || 100}
-            side="right"
-            isWinner={battleComplete && rightBattler.isWinner}
-            avatar={rightBattler.player.avatar}
-          />
-        )}
+      {/* Header Bar: HP bars on sides, Round + Question in center */}
+      <div className="flex items-start gap-4 mb-6">
+        {/* Left HP Bar */}
+        <div className="w-64 flex-shrink-0">
+          {leftBattler?.player && (
+            <FighterHealthBar
+              name={leftBattler.player.name}
+              hp={animatedLeftHp ?? leftBattler.player.hp ?? 0}
+              maxHp={leftBattler.player.maxHp || 100}
+              side="left"
+              isWinner={battleComplete && leftBattler.isWinner}
+              avatar={leftBattler.player.avatar}
+            />
+          )}
+        </div>
+
+        {/* Center: Round + Question */}
+        <div className="flex-1 text-center">
+          <div className="text-lg text-gray-400 mb-1">Round {game.currentRound}</div>
+          {currentPrompt && (
+            <div className="text-xl italic text-gray-300 max-w-2xl mx-auto">
+              &ldquo;{currentPrompt.text}&rdquo;
+            </div>
+          )}
+        </div>
+
+        {/* Right HP Bar */}
+        <div className="w-64 flex-shrink-0">
+          {rightBattler?.player && (
+            <FighterHealthBar
+              name={rightBattler.player.name}
+              hp={animatedRightHp ?? rightBattler.player.hp ?? 0}
+              maxHp={rightBattler.player.maxHp || 100}
+              side="right"
+              isWinner={battleComplete && rightBattler.isWinner}
+              avatar={rightBattler.player.avatar}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Round Indicator */}
-      <div className="text-xl text-gray-400 text-center mb-2">Round {game.currentRound}</div>
-
-      {/* Prompt */}
-      {currentPrompt && (
-        <div className="text-2xl text-center mb-8 max-w-4xl mx-auto italic text-gray-300">
-          &ldquo;{currentPrompt.text}&rdquo;
-        </div>
-      )}
-
-      {/* Battle Arena */}
+      {/* Battle Arena - Full width */}
       <div className="flex-1 flex items-center justify-center">
         <BattleArena
           leftBattler={leftBattlerInfo}
@@ -208,15 +215,15 @@ export function HostVotingView({ game }: HostVotingViewProps) {
       </div>
 
       {/* Status */}
-      <div className="text-center mt-8">
+      <div className="text-center mt-4">
         {!isReveal ? (
-          <div className="text-2xl text-gray-400 animate-pulse">Players are voting...</div>
+          <div className="text-xl text-gray-400 animate-pulse">Players are voting...</div>
         ) : battleComplete ? (
-          <div className="text-xl text-gray-500">
+          <div className="text-lg text-gray-500">
             {winner ? `${winner.player?.name} wins this round!` : "It's a tie!"}
           </div>
         ) : (
-          <div className="text-xl text-gray-500 animate-pulse">Revealing results...</div>
+          <div className="text-lg text-gray-500 animate-pulse">Revealing results...</div>
         )}
       </div>
     </div>
