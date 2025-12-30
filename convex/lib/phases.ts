@@ -90,6 +90,7 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
     const getPrompts = (count: number) => promptManager.pick(count);
 
     // Pairing Logic
+    const pairings = [];
     for (let i = 0; i < survivors.length; i += 2) {
         if (i + 1 >= survivors.length) {
             console.log(`[GAME] Odd survivor ${survivors[i].name} gets a Bye.`);
@@ -100,6 +101,9 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
         const p1 = survivors[i];
         const p2 = survivors[i + 1];
         console.log(`[GAME] Pairing ${p1.name} (${p1.hp}) vs ${p2.name} (${p2.hp})`);
+
+        // Store pairing for transition display
+        pairings.push({ fighter1Id: p1._id, fighter2Id: p2._id });
 
         const promptsTexts = getPrompts(3);
 
@@ -116,7 +120,10 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
         }
     }
 
-    await ctx.db.patch(gameId, { usedPromptIndices: promptManager.getUsedIndices() });
+    await ctx.db.patch(gameId, {
+        usedPromptIndices: promptManager.getUsedIndices(),
+        round2Pairings: pairings
+    });
 }
 
 export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {

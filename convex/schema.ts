@@ -11,6 +11,10 @@ export default defineSchema({
     roundStatus: v.optional(v.string()), // "VOTING" | "REVEAL"
     usedPromptIndices: v.optional(v.array(v.number())), // Track used prompt indices
     hostToken: v.optional(v.string()), // Auth token for host display
+    round2Pairings: v.optional(v.array(v.object({
+      fighter1Id: v.id("players"),
+      fighter2Id: v.id("players"),
+    }))), // Snapshot of Round 2 pairings for transition display
   }).index("by_room_code", ["roomCode"]),
 
   players: defineTable({
@@ -27,7 +31,7 @@ export default defineSchema({
     teamId: v.optional(v.id("players")), // Linked to the "Team Captain" (Winner of the pairing)
     isBot: v.optional(v.boolean()),
     avatar: v.optional(v.string()), // Base64 PNG avatar image
-    lossStreak: v.optional(v.number()), // Track consecutive losses for combo KO
+    winStreak: v.optional(v.number()), // Track consecutive wins for combo bonuses
   }).index("by_game", ["gameId"]),
 
   // temporary for chat verification
