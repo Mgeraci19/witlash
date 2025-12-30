@@ -10,13 +10,14 @@ interface SlideSequenceOptions {
 const EDGE_PERCENT = 0.02; // 2% from edge
 const BOTTOM_PERCENT = 0.08; // 8% from bottom
 const SCALE = 0.65;
+const MOBILE_BREAKPOINT = 768;
 
 /**
  * createSlideTimeline - Slides answers from center to bottom corners
  *
  * Uses percentage-based positioning relative to arena size for responsive scaling.
- * - Left answer slides to bottom-left corner
- * - Right answer slides to bottom-right corner
+ * - Left answer slides to bottom-left corner (or bottom-bottom on mobile)
+ * - Right answer slides to bottom-right corner (or top-bottom on mobile)
  * - VS badge fades out
  * - Both answers scale down
  */
@@ -34,7 +35,9 @@ export function createSlideTimeline({ refs, answerOrder }: SlideSequenceOptions)
   const answer2Rect = refs.answer2.current?.getBoundingClientRect();
 
   if (arenaRect && answer1Rect && answer2Rect) {
-    // Determine which answer goes left vs right based on battler assignment
+    const isMobile = arenaRect.width < MOBILE_BREAKPOINT;
+
+    // Determine which answer goes left vs right (or top vs bottom on mobile) based on battler assignment
     const leftAnswerRef = answerOrder.first === "left" ? refs.answer1 : refs.answer2;
     const rightAnswerRef = answerOrder.first === "right" ? refs.answer1 : refs.answer2;
     const leftAnswerRect = answerOrder.first === "left" ? answer1Rect : answer2Rect;
@@ -56,15 +59,28 @@ export function createSlideTimeline({ refs, answerOrder }: SlideSequenceOptions)
     const edgePadding = arenaRect.width * EDGE_PERCENT;
     const bottomPadding = arenaRect.height * BOTTOM_PERCENT;
 
-    // Target positions using percentage-based padding
-    // Left answer: center X = edgePadding + scaledWidth/2
-    // Right answer: center X = arenaWidth - edgePadding - scaledWidth/2
-    // Both: center Y = arenaHeight - bottomPadding - scaledHeight/2
-    const leftTargetCenterX = edgePadding + leftScaledWidth / 2;
-    const leftTargetCenterY = arenaRect.height - bottomPadding - leftScaledHeight / 2;
+    let leftTargetCenterX, leftTargetCenterY, rightTargetCenterX, rightTargetCenterY;
 
-    const rightTargetCenterX = arenaRect.width - edgePadding - rightScaledWidth / 2;
-    const rightTargetCenterY = arenaRect.height - bottomPadding - rightScaledHeight / 2;
+    if (isMobile) {
+      // Mobile: Stack Vertically at bottom
+      // Right (second) on top of Left (first)? Or vice versa.
+      // Let's put Left (First) at very bottom, Right (Second) above it.
+      const gap = 10;
+
+      leftTargetCenterX = arenaRect.width / 2;
+      leftTargetCenterY = arenaRect.height - bottomPadding - leftScaledHeight / 2;
+
+      rightTargetCenterX = arenaRect.width / 2;
+      rightTargetCenterY = leftTargetCenterY - leftScaledHeight / 2 - gap - rightScaledHeight / 2;
+
+    } else {
+      // Desktop: Split Corners
+      leftTargetCenterX = edgePadding + leftScaledWidth / 2;
+      leftTargetCenterY = arenaRect.height - bottomPadding - leftScaledHeight / 2;
+
+      rightTargetCenterX = arenaRect.width - edgePadding - rightScaledWidth / 2;
+      rightTargetCenterY = arenaRect.height - bottomPadding - rightScaledHeight / 2;
+    }
 
     // Calculate offsets from current position to target
     const leftOffsetX = leftTargetCenterX - leftCurrentCenterX;
@@ -72,7 +88,7 @@ export function createSlideTimeline({ refs, answerOrder }: SlideSequenceOptions)
     const rightOffsetX = rightTargetCenterX - rightCurrentCenterX;
     const rightOffsetY = rightTargetCenterY - rightCurrentCenterY;
 
-    // Animate left answer to bottom-left
+    // Animate left answer
     timeline.to(leftAnswerRef.current, {
       x: leftOffsetX,
       y: leftOffsetY,
@@ -81,7 +97,7 @@ export function createSlideTimeline({ refs, answerOrder }: SlideSequenceOptions)
       ease: "power2.out",
     }, "slide");
 
-    // Animate right answer to bottom-right
+    // Animate right answer
     timeline.to(rightAnswerRef.current, {
       x: rightOffsetX,
       y: rightOffsetY,

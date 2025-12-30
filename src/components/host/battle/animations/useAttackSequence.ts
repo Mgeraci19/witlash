@@ -49,6 +49,9 @@ export function playWinnerAttack({
 
   const winnerRef = winnerIsLeft ? refs.leftFighter : refs.rightFighter;
   const loserRef = winnerIsLeft ? refs.rightFighter : refs.leftFighter;
+  // Get dynamic width for offscreen calculation
+  const arenaWidth = refs.arena.current?.clientWidth || 800;
+  const offscreenDist = arenaWidth * 1.2; // 120% of width to be safe
   const direction = winnerIsLeft ? 1 : -1;
 
   if (isKO) {
@@ -57,7 +60,7 @@ export function playWinnerAttack({
       onComplete: () => {
         // Bump loser offscreen
         gsap.to(loserRef.current, {
-          x: direction * 800,
+          x: direction * offscreenDist,
           rotation: direction * 720,
           opacity: 0,
           duration: 0.8,
