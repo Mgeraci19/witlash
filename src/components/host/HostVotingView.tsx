@@ -9,9 +9,10 @@ import { CornerManAssignment } from "./CornerManAssignment";
 
 interface HostVotingViewProps {
   game: GameState;
+  showWritingIndicator?: boolean;
 }
 
-export function HostVotingView({ game }: HostVotingViewProps) {
+export function HostVotingView({ game, showWritingIndicator = false }: HostVotingViewProps) {
   const isReveal = game.roundStatus === "REVEAL";
 
   // Track battle completion for status display
@@ -86,6 +87,7 @@ export function HostVotingView({ game }: HostVotingViewProps) {
 
     // Calculate damage based on votes (matches backend logic)
     const DAMAGE_CAP = 35;
+    const COMBO_BONUS_DAMAGE = 15;
     let leftDmg = 0;
     let rightDmg = 0;
 
@@ -103,13 +105,31 @@ export function HostVotingView({ game }: HostVotingViewProps) {
         const damage = 0.5 * DAMAGE_CAP * getRoundMultiplier(game.currentRound);
         leftDmg = Math.floor(damage);
         rightDmg = Math.floor(damage);
+        console.log(`[TIE] Both players take ${Math.floor(damage)} damage. Combos will reset (unless KO tiebreaker applies).`);
       } else {
         // Non-tie: Only loser takes damage
         const loserIsLeft = leftVotesFor < rightVotesFor;
+
+        // Get winner's player data from submissions
+        const winnerSubmission = loserIsLeft ? currentSubmissions[1] : currentSubmissions[0];
+        const winnerPlayer = game.players.find((p) => p._id === winnerSubmission.playerId);
+        const winnerStreak = winnerPlayer?.winStreak || 0;
+
         const loserVotesFor = loserIsLeft ? leftVotesFor : rightVotesFor;
         const votesAgainst = total - loserVotesFor;
 
-        const damage = (votesAgainst / total) * DAMAGE_CAP * getRoundMultiplier(game.currentRound);
+        let damage = (votesAgainst / total) * DAMAGE_CAP * getRoundMultiplier(game.currentRound);
+
+        // Apply combo bonuses (matches backend logic)
+        if (winnerStreak === 2) {
+          // 3rd win = instant KO
+          damage = 999;
+          console.log(`[COMBO x3] ${winnerPlayer?.name} has 2-win streak, dealing instant KO damage!`);
+        } else if (winnerStreak === 1) {
+          // 2nd win = bonus damage
+          damage += COMBO_BONUS_DAMAGE;
+          console.log(`[COMBO x2] ${winnerPlayer?.name} has 1-win streak, dealing +${COMBO_BONUS_DAMAGE} bonus damage!`);
+        }
 
         if (loserIsLeft) {
           leftDmg = Math.floor(damage);
@@ -173,7 +193,7 @@ export function HostVotingView({ game }: HostVotingViewProps) {
         hp: leftBattler.player?.hp || 100,
         maxHp: leftBattler.player?.maxHp || 100,
         submissionTime: leftBattler._creationTime,
-        lossStreak: leftBattler.player?.lossStreak,
+        winStreak: leftBattler.player?.winStreak,
       }
     : null;
 
@@ -189,7 +209,7 @@ export function HostVotingView({ game }: HostVotingViewProps) {
         hp: rightBattler.player?.hp || 100,
         maxHp: rightBattler.player?.maxHp || 100,
         submissionTime: rightBattler._creationTime,
-        lossStreak: rightBattler.player?.lossStreak,
+        winStreak: rightBattler.player?.winStreak,
       }
     : null;
 
@@ -225,13 +245,13 @@ export function HostVotingView({ game }: HostVotingViewProps) {
       teamId: p.teamId,
       hp: p.hp,
       knockedOut: p.knockedOut,
-      lossStreak: p.lossStreak,
+      winStreak: p.winStreak,
     })));
 
-    // Check for COMBO KO (3 straight losses in Round 1)
+    // Check for COMBO KO (3 straight wins triggers instant KO)
     game.players.forEach(p => {
-      if (p.knockedOut && (p.lossStreak || 0) >= 3 && game.currentRound === 1) {
-        console.log(`%c[COMBO KO!!!] ${p.name} was eliminated after 3 straight losses!`, 'color: red; font-weight: bold; font-size: 16px');
+      if (p.knockedOut && (p.winStreak || 0) >= 3) {
+        console.log(`%c[COMBO KO!!!] ${p.name} achieved a 3-win combo and got instant KO!`, 'color: red; font-weight: bold; font-size: 16px');
       }
     });
 
@@ -334,7 +354,7 @@ export function HostVotingView({ game }: HostVotingViewProps) {
               isWinner={battleComplete && leftBattler.isWinner}
               avatar={leftBattler.player.avatar}
               showDamage={leftShowDamage}
-              lossStreak={leftBattler.player.lossStreak}
+              winStreak={leftBattler.player.winStreak}
             />
           )}
         </div>
@@ -355,7 +375,7 @@ export function HostVotingView({ game }: HostVotingViewProps) {
               isWinner={battleComplete && rightBattler.isWinner}
               avatar={rightBattler.player.avatar}
               showDamage={rightShowDamage}
-              lossStreak={rightBattler.player.lossStreak}
+              winStreak={rightBattler.player.winStreak}
             />
           )}
         </div>
@@ -394,6 +414,20 @@ export function HostVotingView({ game }: HostVotingViewProps) {
           champAvatar={cornerManAssignment.champAvatar}
           onComplete={() => setShowCornerManAssignment(false)}
         />
+      )}
+
+      {/* Round 4 Writing Indicator - Shows during PROMPTS phase in Round 4 */}
+      {showWritingIndicator && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+          <div className="bg-black/80 px-12 py-8 rounded-2xl border-2 border-yellow-400">
+            <div className="text-4xl md:text-5xl font-bold text-yellow-400 mb-3 text-center animate-pulse">
+              Players Writing Answers...
+            </div>
+            <div className="text-xl text-gray-300 text-center">
+              Sudden Death continues when answers are submitted
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

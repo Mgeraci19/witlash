@@ -200,8 +200,9 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
 export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 3: The Gauntlet`);
 
-    // Active Teams = Players who are NOT Knocked Out. (Corner men are attached to them via teamId, but prompts go to Fighter)
-    const activeFighters = players.filter((p) => !p.knockedOut);
+    // Active Teams = Players who are NOT Knocked Out AND are actual fighters (not corner men)
+    // Corner men should NOT receive prompts - they can only send suggestions
+    const activeFighters = players.filter((p) => p.role === "PLAYER" && !p.knockedOut);
     console.log(`[GAME] Active Fighters for Gauntlet: ${activeFighters.length}`);
 
     if (activeFighters.length < 2) {
