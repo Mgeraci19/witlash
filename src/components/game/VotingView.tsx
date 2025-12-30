@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Id } from "../../../convex/_generated/dataModel";
 import { GameState } from "@/lib/types";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { useVotingLogic } from "@/hooks/useVotingLogic";
 
 interface VotingViewProps {
     game: GameState;
@@ -24,71 +25,17 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
     useEffect(() => {
         setIsSubmitting(false);
     }, [game.currentPromptId]);
-    // 1. Memoize Derived State
-    const { currentSubmissions, currentVotes, maxVotes, myVote, votingState, promptText } = useMemo(() => {
-        if (!game.currentPromptId) {
-            return {
-                currentSubmissions: [],
-                currentVotes: [],
-                maxVotes: 0,
-                myVote: undefined,
-                votingState: null,
-                promptText: ""
-            };
-        }
 
-        const promptText = game.prompts?.find((p) => p._id === game.currentPromptId)?.text || "";
-        const currentSubmissions = game.submissions?.filter((s) => s.promptId === game.currentPromptId) || [];
-        const currentVotes = game.votes?.filter((v) => v.promptId === game.currentPromptId) || [];
-        const myVote = currentVotes.find((v) => v.playerId === playerId);
-
-        // Max Vote Calculation
-        let maxVotes = -1;
-        if (currentVotes.length > 0) {
-            const voteCounts = new Map<string, number>();
-            currentVotes.forEach((v) => {
-                const count = (voteCounts.get(v.submissionId) || 0) + 1;
-                voteCounts.set(v.submissionId, count);
-                if (count > maxVotes) maxVotes = count;
-            });
-        }
-
-        return {
-            currentSubmissions,
-            currentVotes,
-            maxVotes,
-            myVote,
-            votingState: {
-                hasVoted: !!myVote,
-                isReveal: game.roundStatus === "REVEAL",
-                totalVotes: currentVotes.length
-            },
-            promptText
-        };
-
-    }, [game.currentPromptId, game.submissions, game.votes, game.prompts, game.roundStatus, playerId]);
-
-    // 2. Determine User Role for this Battle
-    const userRoleState = useMemo(() => {
-        const battlerIds = currentSubmissions.map((sub) => sub.playerId);
-        const me = game.players.find((p) => p._id === playerId);
-
-        const amICornerManForBattler = me?.role === "CORNER_MAN" && me.teamId && battlerIds.includes(me.teamId);
-
-        // Am I the literal person fighting?
-        const amITheFighter = currentSubmissions.some((sub) => sub.playerId === playerId);
-
-        // Can I vote?
-        // Logic: You cannot vote if you are fighting OR supporting a fighter.
-        const canVote = !amITheFighter && !amICornerManForBattler;
-
-        return {
-            amIBattling: amITheFighter,
-            amISupporting: amICornerManForBattler,
-            canVote: canVote && !votingState?.isReveal
-        };
-    }, [currentSubmissions, game.players, playerId, votingState?.isReveal]);
-
+    // Use derived state from hook
+    const {
+        currentSubmissions,
+        currentVotes,
+        maxVotes,
+        myVote,
+        votingState,
+        promptText,
+        userRoleState
+    } = useVotingLogic(game, playerId);
 
     if (!game.currentPromptId) {
         return (

@@ -1,26 +1,51 @@
 import { PROMPTS } from "./constants";
 
-export function getPromptText(availableIndices: number[], newUsedIndices: number[]) {
-    if (availableIndices.length === 0) {
-        // Reset if empty, but be careful not to create infinite loop in caller if newUsedIndices covers everything.
-        // For simple logic, just refilling logic needs to be handled by caller or passed back.
-        // Simpler: Just pick random from ALL prompts if exhausted? 
-        // Or re-map indices.
-        // Let's assume caller handles refill if empty, or we do it here?
-        // To avoid modifying array references in complex ways, let's just pick a random index from PROMPTS 
-        // if available is empty, disregarding 'used' to prevent crash.
-        const randIdx = Math.floor(Math.random() * PROMPTS.length);
-        return PROMPTS[randIdx];
+export class PromptManager {
+    private availableIndices: number[];
+    private usedIndices: Set<number>;
+
+    constructor(initialUsedIndices: number[]) {
+        this.usedIndices = new Set(initialUsedIndices || []);
+        this.availableIndices = PROMPTS.map((_, i) => i).filter(i => !this.usedIndices.has(i));
     }
-    const randIdx = Math.floor(Math.random() * availableIndices.length);
-    const pIdx = availableIndices[randIdx];
-    availableIndices.splice(randIdx, 1);
-    if (!newUsedIndices.includes(pIdx)) newUsedIndices.push(pIdx);
-    return PROMPTS[pIdx];
+
+    /**
+     * Pick 'count' random prompts.
+     * Automatically refills available prompts if exhausted.
+     */
+    public pick(count: number = 1): string[] {
+        const results: string[] = [];
+        for (let i = 0; i < count; i++) {
+            if (this.availableIndices.length === 0) {
+                // Refill from all prompts
+                this.availableIndices = PROMPTS.map((_, k) => k);
+            }
+            // Pick random
+            const randIdx = Math.floor(Math.random() * this.availableIndices.length);
+            const promptIdx = this.availableIndices[randIdx];
+
+            // Remove from available
+            this.availableIndices.splice(randIdx, 1);
+
+            // Add to used
+            this.usedIndices.add(promptIdx);
+
+            results.push(PROMPTS[promptIdx]);
+        }
+        return results;
+    }
+
+    /**
+     * Get the updated list of used indices to save to DB.
+     */
+    public getUsedIndices(): number[] {
+        return Array.from(this.usedIndices);
+    }
 }
 
+// Deprecated helpers (kept for safety until phases.ts is updated in next step)
 export function getAvailableIndices(usedPromptIndices: number[]) {
-    const usedIndices = new Set(usedPromptIndices || []);
-    const availableIndices = PROMPTS.map((_, i) => i).filter(i => !usedIndices.has(i));
-    return { availableIndices, usedIndices: [...usedIndices] };
+    const mgr = new PromptManager(usedPromptIndices);
+    return { availableIndices: [], usedIndices: mgr.getUsedIndices() }; // API changed, but we will replace usages anyway.
 }
+

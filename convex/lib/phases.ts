@@ -2,7 +2,7 @@ import { Id, Doc } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
 import { PROMPTS } from "./constants";
 import { api } from "../_generated/api";
-import { getAvailableIndices, getPromptText } from "./promptUtils";
+import { PromptManager } from "./promptUtils";
 
 export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 1 (Series Matchups) for ${players.length} players`);
@@ -13,20 +13,8 @@ export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    const availResult = getAvailableIndices(game.usedPromptIndices || []);
-    let availableIndices = availResult.availableIndices;
-    const newUsedIndices = availResult.usedIndices;
-
-    // Helpers
-    const getPrompts = (count: number) => {
-        const selected = [];
-        for (let i = 0; i < count; i++) {
-            // If ran out, refill from all prompt indices
-            if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
-            selected.push(getPromptText(availableIndices, newUsedIndices));
-        }
-        return selected;
-    };
+    const promptManager = new PromptManager(game.usedPromptIndices || []);
+    const getPrompts = (count: number) => promptManager.pick(count);
 
     // Pairing Logic
     for (let i = 0; i < shuffledPlayers.length; i += 2) {
@@ -64,7 +52,7 @@ export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players
     }
 
     // Update used indices
-    await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
+    await ctx.db.patch(gameId, { usedPromptIndices: promptManager.getUsedIndices() });
 }
 
 // Bot Helper
@@ -97,18 +85,9 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    const availResult = getAvailableIndices(game.usedPromptIndices || []);
-    let availableIndices = availResult.availableIndices;
-    const newUsedIndices = availResult.usedIndices;
+    const promptManager = new PromptManager(game.usedPromptIndices || []);
 
-    const getPrompts = (count: number) => {
-        const selected = [];
-        for (let i = 0; i < count; i++) {
-            if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
-            selected.push(getPromptText(availableIndices, newUsedIndices));
-        }
-        return selected;
-    };
+    const getPrompts = (count: number) => promptManager.pick(count);
 
     // Pairing Logic
     for (let i = 0; i < survivors.length; i += 2) {
@@ -137,7 +116,7 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
         }
     }
 
-    await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
+    await ctx.db.patch(gameId, { usedPromptIndices: promptManager.getUsedIndices() });
 }
 
 export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
@@ -230,14 +209,9 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
     // Reuse prompt picker
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    const availResult = getAvailableIndices(game.usedPromptIndices || []);
-    let availableIndices = availResult.availableIndices;
-    const newUsedIndices = availResult.usedIndices;
+    const promptManager = new PromptManager(game.usedPromptIndices || []);
 
-    const getPrompt = () => {
-        if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
-        return getPromptText(availableIndices, newUsedIndices);
-    };
+    const getPrompt = () => promptManager.pick(1)[0];
 
     // Schedule 3 fights per fighter.
     // We shuffle fighters and pair them up.
@@ -273,7 +247,7 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
         }
     }
 
-    await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
+    await ctx.db.patch(gameId, { usedPromptIndices: promptManager.getUsedIndices() });
 }
 
 export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
@@ -310,14 +284,9 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    const availResult = getAvailableIndices(game.usedPromptIndices || []);
-    let availableIndices = availResult.availableIndices;
-    const newUsedIndices = availResult.usedIndices;
+    const promptManager = new PromptManager(game.usedPromptIndices || []);
 
-    const getPrompt = () => {
-        if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
-        return getPromptText(availableIndices, newUsedIndices);
-    };
+    const getPrompt = () => promptManager.pick(1)[0];
 
     // Generate just 1 prompt to start (Sudden Death style)
     const text = getPrompt();
@@ -331,7 +300,7 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
         await ctx.scheduler.runAfter(delay, api.bots.autoAnswer, { gameId, playerId: p2._id, promptId });
     }
 
-    await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
+    await ctx.db.patch(gameId, { usedPromptIndices: promptManager.getUsedIndices() });
 }
 
 export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"games">, p1: Doc<"players">, p2: Doc<"players">, players: Doc<"players">[]) {
@@ -373,13 +342,9 @@ export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"game
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    const availResult = getAvailableIndices(game.usedPromptIndices || []);
-    let availableIndices = availResult.availableIndices;
-    const newUsedIndices = availResult.usedIndices;
 
-    // Ensure we have indices
-    if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
-    const text = getPromptText(availableIndices, newUsedIndices);
+    const promptManager = new PromptManager(game.usedPromptIndices || []);
+    const [text] = promptManager.pick(1);
 
     const promptId = await ctx.db.insert("prompts", { gameId, text, assignedTo: [p1._id, p2._id] });
     console.log(`[GAME] New Sudden Death prompt created: ${promptId}`);
@@ -389,7 +354,7 @@ export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"game
         currentPromptId: promptId,
         status: "PROMPTS",
         roundStatus: undefined, // Reset round status
-        usedPromptIndices: newUsedIndices
+        usedPromptIndices: promptManager.getUsedIndices()
     });
 
     // Auto-answer logic needs to verify Human Corner Man
