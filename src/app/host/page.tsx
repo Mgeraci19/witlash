@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useRef } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -10,7 +10,7 @@ import { HostWritingView } from "@/components/host/HostWritingView";
 import { HostVotingView } from "@/components/host/HostVotingView";
 import { HostRoundResultsView } from "@/components/host/HostRoundResultsView";
 import { HostGameResultsView } from "@/components/host/HostGameResultsView";
-import { RoundTransition } from "@/components/host/RoundTransition";
+import { TransitionOrchestrator } from "@/components/host/transitions";
 
 function HostContent() {
     const searchParams = useSearchParams();
@@ -18,9 +18,6 @@ function HostContent() {
     const router = useRouter();
 
     const [hostToken, setHostToken] = useState<string>("");
-    const [showRoundTransition, setShowRoundTransition] = useState(false);
-    const [transitionRound, setTransitionRound] = useState(1);
-    const previousRoundRef = useRef<number | null>(null);
 
     // Get hostToken from sessionStorage
     useEffect(() => {
@@ -44,25 +41,6 @@ function HostContent() {
         api.game.getForHost,
         roomCode && hostToken ? { roomCode, hostToken } : "skip"
     ) as GameState | undefined | null;
-
-    // Handle round transitions
-    useEffect(() => {
-        if (!game) return;
-
-        const currentRound = game.currentRound;
-
-        // Only trigger on actual round changes (not initial load)
-        if (previousRoundRef.current !== null && previousRoundRef.current !== currentRound) {
-            // LINT FIX: setState to trigger round transition animation is intentional
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setTransitionRound(currentRound);
-             
-            setShowRoundTransition(true);
-        }
-
-        previousRoundRef.current = currentRound;
-    // LINT FIX: Added 'game' to dependencies to avoid stale closure
-    }, [game]);
 
     if (!roomCode || !hostToken) return null;
 
@@ -97,13 +75,6 @@ function HostContent() {
         );
     }
 
-    const roundSubtitles: Record<number, string> = {
-        1: "THE OPENER",
-        2: "THE CULL",
-        3: "THE GAUNTLET",
-        4: "SUDDEN DEATH",
-    };
-
     return (
         <div
             id="host-container"
@@ -114,14 +85,8 @@ function HostContent() {
             data-round-status={game.roundStatus}
             className="min-h-screen bg-black text-white overflow-hidden"
         >
-            {/* Round Transition Overlay */}
-            {showRoundTransition && (
-                <RoundTransition
-                    roundNumber={transitionRound}
-                    subtitle={roundSubtitles[transitionRound] || "FIGHT!"}
-                    onComplete={() => setShowRoundTransition(false)}
-                />
-            )}
+            {/* Transition Orchestrator - Event-driven transitions */}
+            <TransitionOrchestrator gameState={game} />
 
             {/* Phase Views */}
             {game.status === "LOBBY" && (
