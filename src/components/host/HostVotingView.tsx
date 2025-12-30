@@ -159,12 +159,12 @@ export function HostVotingView({ game }: HostVotingViewProps) {
       data-phase="VOTING"
       data-round-status={game.roundStatus}
       data-prompt-id={game.currentPromptId}
-      className="flex flex-col min-h-screen p-4"
+      className="flex flex-col h-screen p-4 overflow-hidden"
     >
-      {/* Header Bar: HP bars on sides, Round + Question in center */}
-      <div className="flex items-start gap-4 mb-6">
+      {/* Header Bar: HP bars on sides, Round in center */}
+      <div className="flex items-start gap-4 mb-2 flex-shrink-0">
         {/* Left HP Bar */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-72 flex-shrink-0">
           {leftBattler?.player && (
             <FighterHealthBar
               name={leftBattler.player.name}
@@ -177,18 +177,13 @@ export function HostVotingView({ game }: HostVotingViewProps) {
           )}
         </div>
 
-        {/* Center: Round + Question */}
+        {/* Center: Round indicator only */}
         <div className="flex-1 text-center">
-          <div className="text-lg text-gray-400 mb-1">Round {game.currentRound}</div>
-          {currentPrompt && (
-            <div className="text-xl italic text-gray-300 max-w-2xl mx-auto">
-              &ldquo;{currentPrompt.text}&rdquo;
-            </div>
-          )}
+          <div className="text-2xl font-bold text-gray-300">Round {game.currentRound}</div>
         </div>
 
         {/* Right HP Bar */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-72 flex-shrink-0">
           {rightBattler?.player && (
             <FighterHealthBar
               name={rightBattler.player.name}
@@ -202,30 +197,27 @@ export function HostVotingView({ game }: HostVotingViewProps) {
         </div>
       </div>
 
-      {/* Battle Arena - Full width */}
-      <div className="flex-1 flex items-center justify-center">
+      {/* Battle Arena - Takes remaining space */}
+      <div className="flex-1 min-h-0">
         <BattleArena
           leftBattler={leftBattlerInfo}
           rightBattler={rightBattlerInfo}
           isReveal={isReveal}
           promptId={game.currentPromptId}
+          promptText={currentPrompt?.text}
           onBattleComplete={handleBattleComplete}
           onDamageApplied={handleDamageApplied}
         />
       </div>
 
-      {/* Status */}
-      <div className="text-center mt-4">
-        {!isReveal ? (
-          <div className="text-xl text-gray-400 animate-pulse">Players are voting...</div>
-        ) : battleComplete ? (
+      {/* Status - Only show result after battle complete */}
+      {battleComplete && (
+        <div className="text-center py-2 flex-shrink-0">
           <div className="text-lg text-gray-500">
             {winner ? `${winner.player?.name} wins this round!` : "It's a tie!"}
           </div>
-        ) : (
-          <div className="text-lg text-gray-500 animate-pulse">Revealing results...</div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
