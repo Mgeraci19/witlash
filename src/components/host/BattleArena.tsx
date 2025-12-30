@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState } from "react";
 import { AvatarFighter, FighterState } from "./AvatarFighter";
 import { useBattleSequence } from "./animations/sequences";
 import { BattleSide } from "./animations/registry/types";
@@ -35,12 +35,6 @@ interface BattleArenaProps {
 
 /**
  * BattleArena - Avatar-centric battle display with Street Fighter-style animations
- *
- * Layout:
- * - Large avatars on left and right
- * - Answer cards below avatars
- * - VS badge in center (fades on reveal)
- * - Battle animations triggered on reveal
  */
 export function BattleArena({
   leftBattler,
@@ -66,6 +60,12 @@ export function BattleArena({
   // Track if we've animated this prompt
   const hasAnimatedRef = useRef(false);
 
+  // Store callbacks in refs to avoid dependency issues
+  const onBattleCompleteRef = useRef(onBattleComplete);
+  const onDamageAppliedRef = useRef(onDamageApplied);
+  onBattleCompleteRef.current = onBattleComplete;
+  onDamageAppliedRef.current = onDamageApplied;
+
   // Initialize battle sequence hook
   const { state: battleState, actions: battleActions } = useBattleSequence({
     leftFighter: leftFighterRef,
@@ -80,43 +80,31 @@ export function BattleArena({
         setRightState("hurt");
         setTimeout(() => setRightState("idle"), 200);
       }
-      onDamageApplied?.(side, damage);
+      onDamageAppliedRef.current?.(side, damage);
     },
     onSequenceComplete: () => {
-      // Set final states
-      if (leftBattler?.isWinner) {
-        setLeftState("victory");
-        setRightState("ko");
-      } else if (rightBattler?.isWinner) {
-        setRightState("victory");
-        setLeftState("ko");
-      }
+      // Set final states based on current battler data
       setShowResults(true);
-      onBattleComplete?.();
+      onBattleCompleteRef.current?.();
     },
     onPhaseChange: (phase) => {
       if (phase === "attacking") {
-        // Determine who is attacking
-        if (leftBattler?.isWinner) {
-          setLeftState("attacking");
-        } else if (rightBattler?.isWinner) {
-          setRightState("attacking");
-        }
+        setLeftState("attacking");
       }
     },
   });
 
+  // Store actions in ref to avoid dependency issues
+  const battleActionsRef = useRef(battleActions);
+  battleActionsRef.current = battleActions;
+
   // Reset when prompt changes
-  // Note: setState in effect is intentional here to reset UI state when prompt changes
   useEffect(() => {
     hasAnimatedRef.current = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLeftState("idle");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRightState("idle");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowResults(false);
-    battleActions.stop();
+    battleActionsRef.current.stop();
 
     // Reset positions
     if (leftFighterRef.current) gsap.set(leftFighterRef.current, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
@@ -124,7 +112,7 @@ export function BattleArena({
     if (vsRef.current) gsap.set(vsRef.current, { opacity: 1, scale: 1 });
     if (leftAnswerRef.current) gsap.set(leftAnswerRef.current, { opacity: 1, y: 0 });
     if (rightAnswerRef.current) gsap.set(rightAnswerRef.current, { opacity: 1, y: 0 });
-  }, [promptId, battleActions]);
+  }, [promptId]);
 
   // Trigger battle on reveal
   useEffect(() => {
@@ -148,8 +136,15 @@ export function BattleArena({
           const damage = winner.voteCount * 5; // 5 damage per vote
           const isKO = false; // Could check if HP would go to 0
 
+          // Update states for winner/loser
+          if (leftBattler.isWinner) {
+            setLeftState("attacking");
+          } else {
+            setRightState("attacking");
+          }
+
           // Play battle animation
-          battleActions.playBattle({
+          battleActionsRef.current.playBattle({
             winnerId: winner.id,
             winnerSide: leftBattler.isWinner ? "left" : "right",
             loserId: leftBattler.isWinner ? rightBattler.id : leftBattler.id,
@@ -161,11 +156,24 @@ export function BattleArena({
         } else if (isTie) {
           // Just show results for tie
           setShowResults(true);
-          onBattleComplete?.();
+          onBattleCompleteRef.current?.();
         }
       },
     });
-  }, [isReveal, leftBattler, rightBattler, battleActions, onBattleComplete]);
+  }, [isReveal, leftBattler, rightBattler]);
+
+  // Update final states when battle completes and we have results
+  useEffect(() => {
+    if (showResults && leftBattler && rightBattler) {
+      if (leftBattler.isWinner) {
+        setLeftState("victory");
+        setRightState("ko");
+      } else if (rightBattler.isWinner) {
+        setRightState("victory");
+        setLeftState("ko");
+      }
+    }
+  }, [showResults, leftBattler, rightBattler]);
 
   if (!leftBattler || !rightBattler) {
     return (

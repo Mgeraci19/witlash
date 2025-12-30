@@ -61,20 +61,21 @@ export const AvatarFighter = forwardRef<HTMLDivElement, AvatarFighterProps>(
     // Idle breathing animation
     useEffect(() => {
       const el = innerRef.current;
-      if (!el || state !== "idle") {
-        idleAnimationRef.current?.kill();
-        return;
-      }
+      if (!el) return;
 
-      // Subtle breathing effect
-      idleAnimationRef.current = gsap.to(el, {
-        scaleY: 1.02,
-        scaleX: 0.98,
-        duration: 1.5,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
+      // Kill any existing animation
+      idleAnimationRef.current?.kill();
+
+      if (state === "idle") {
+        // Subtle breathing effect - only use Y scale to avoid conflicts
+        idleAnimationRef.current = gsap.to(el, {
+          scaleY: 1.03,
+          duration: 1.5,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      }
 
       return () => {
         idleAnimationRef.current?.kill();
@@ -145,18 +146,12 @@ export const AvatarFighter = forwardRef<HTMLDivElement, AvatarFighterProps>(
             bg-gray-800
             transition-shadow duration-300
           `}
-          style={{
-            transform: side === "right" ? "scaleX(-1)" : undefined,
-          }}
         >
           {avatar ? (
             <img
               src={avatar}
               alt={`${name}'s avatar`}
               className="w-full h-full object-cover"
-              style={{
-                transform: side === "right" ? "scaleX(-1)" : undefined,
-              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-6xl text-gray-500">
