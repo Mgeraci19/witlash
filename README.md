@@ -1,74 +1,160 @@
-# SmackTalk
+# SmackTalk 🎮
 
-**SmackTalk** is a multiplayer party game Players answer prompts with witty responses and vote on their favorites in a tournament-style battle.
+A multiplayer battle-of-wits game where players compete in SmackTalk battles! Answer prompts creatively, vote on the best answers, and knock out your opponents in this Jackbox-style party game.
 
-## Tech Stack
--   **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS 4.
--   **Backend**: Convex (Real-time database and serverless functions).
--   **Deployment**: GitHub Pages (Static Export).
+## 🎯 Game Overview
 
-## Architecture & Data Flow
-This section provides a high-level overview for developers and AI assistants navigating the codebase.
+SmackTalk is a 4-round elimination game for 4-8 players:
 
-### Frontend Structure (`src/`)
--   `app/page.tsx`: Landing page. Allows creating a new game or joining an existing one.
--   `app/room/[code]/page.tsx`: **Main Game Loop**. This component handles the entire game state for a connected player (Lobby -> Writing -> Voting -> Results).
--   `app/globals.css`: Tailwind imports and global styles.
+- **Round 1-2**: Series Matchups - Players answer prompts and vote. Losers become "Corner Men" for winners
+- **Round 3**: The Gauntlet - Remaining fighters battle it out
+- **Round 4**: Final Showdown - The last two standing fight in sudden death mode
 
-### Backend Structure (`convex/`)
--   `schema.ts`: Defines the database tables:
-    -   `games`: Stores game state (`LOBBY`, `WRITING`, `VOTING`, `RESULTS`), room code, and current round info.
-    -   `players`: Stores player profiles (name, score) linked to a game.
-    -   `prompts`: Stores the questions/prompts for a game round.
-    -   `submissions`: Stores player answers to prompts.
-    -   `votes`: Stores votes cast during the battle phase.
--   `games.ts`: Core game logic mutations and queries:
-    -   `createGame`: Initializes a new game room.
-    -   `joinGame`: adds a player to the game.
-    -   `startGame`: Transitions from Lobby to Writing phase.
-    -   `submitAnswer`: Records a player's answer.
-    -   `submitVote`: Records a vote.
-    -   `nextPhase`: Advances the game state (e.g., Writing -> Voting).
+## 🚀 Live Demo
 
-## Development Setup
+Play now at: [https://mgeraci19.github.io/witlash/](https://mgeraci19.github.io/witlash/)
 
-1.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+## 🛠️ Tech Stack
 
-2.  **Start Convex Dev Server**:
-    ```bash
-    npx convex dev
-    ```
+- **Frontend**: Next.js 16 (React 19) with TypeScript
+- **Backend**: Convex (real-time database and serverless functions)
+- **Styling**: Tailwind CSS
+- **Deployment**: GitHub Pages (static export)
 
-3.  **Start Frontend Dev Server**:
-    ```bash
-    npm run dev
-    ```
+## 🏗️ Architecture
 
-4.  **Open App**: Visit `http://localhost:3000`.
+### Frontend (`src/`)
+- **`app/page.tsx`**: Home page for creating/joining games
+- **`app/room/page.tsx`**: Main game room with phase routing
+- **`components/game/`**: Game phase components
+  - `LobbyView.tsx` - Waiting room
+  - `WritingView.tsx` - Answer submission phase
+  - `VotingView.tsx` - Voting phase with results
+  - `RoundResultsView.tsx` - Round recap
+  - `GameResultsView.tsx` - Final results
 
-## Deployment
+### Backend (`convex/`)
+- **`lobby.ts`**: Game creation, joining, and starting
+- **`engine.ts`**: Core game loop (damage, elimination, round progression)
+- **`actions.ts`**: Player actions (submit answers, vote, suggestions)
+- **`bots.ts`**: AI players for testing and filling lobbies
+- **`lib/phases.ts`**: Round setup and matchmaking logic
 
-### Backend (Convex)
-Deploy your Convex functions to production:
+## 🎮 Key Features
+
+### Real-Time Multiplayer
+- Instant state synchronization across all players
+- No polling - updates pushed via Convex subscriptions
+
+### Bot Players
+- Automatically fill lobbies to 6 players minimum
+- Bots vote and answer prompts
+- Bot Corner Men send suggestions to human captains
+
+### Corner Man System
+- Eliminated players become "Corner Men" for their victors
+- Can send suggestions to their captain
+- Human corner men can control bot captains
+
+### HP & Damage System
+- 100 HP starting health
+- Proportional damage based on voting results
+- Sudden death with 1.5x multiplier in Round 4
+
+## 📦 Local Development
+
+### Prerequisites
+- Node.js 20+
+- npm
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Mgeraci19/witlash.git
+   cd witlash
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up Convex**
+   ```bash
+   npx convex dev
+   ```
+   This will create a `.env.local` file with your Convex deployment URL.
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open the game**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## 🚀 Deployment
+
+### GitHub Pages Deployment
+
+This project is configured for automatic deployment to GitHub Pages.
+
+1. **Set up Convex production deployment**
+   ```bash
+   npx convex deploy
+   ```
+   Copy the production URL (e.g., `https://your-project.convex.cloud`)
+
+2. **Configure GitHub Repository**
+   - Go to repository Settings → Secrets and variables → Actions → Variables
+   - Add `NEXT_PUBLIC_CONVEX_URL` with your production Convex URL
+
+3. **Enable GitHub Pages**
+   - Go to Settings → Pages
+   - Source: GitHub Actions
+
+4. **Deploy**
+   ```bash
+   git add .
+   git commit -m "Deploy SmackTalk"
+   git push origin main
+   ```
+
+The GitHub Action will automatically build and deploy on push to `main`.
+
+## 🧪 Testing
+
+### Bot-Only Testing
+Use the `scenarios.ts` file to quickly test specific game states:
+
 ```bash
-npx convex deploy
+# In Convex dashboard, run:
+scenarios:testDualBots
 ```
-This will provide the Production URL (e.g., `https://example-app-123.convex.cloud`).
 
-### Frontend (GitHub Pages)
-The frontend is automatically deployed to GitHub Pages via GitHub Actions when pushing to `main`.
+### Manual Testing
+1. Open multiple browser windows/tabs
+2. Create a game and copy the room code
+3. Join from other windows with different names
+4. Bots will automatically fill empty slots
 
-1.  **Configuration**:
-    The workflow is defined in `.github/workflows/deploy.yml`.
-    It uses `next build` with `output: "export"`.
+## 🐛 Known Issues & Fixes
 
-2.  **Environment Variables**:
-    The production build requires `NEXT_PUBLIC_CONVEX_URL`.
-    This is set as a **Repository Variable** in GitHub Settings:
-    `Settings > Secrets and variables > Actions > Variables`.
+All major bugs have been resolved:
+- ✅ Duplicate voting in Round 4 (fixed with prompt validation)
+- ✅ NaN HP values (fixed with sanitization)
+- ✅ Vote leaking between games (fixed with proper filtering)
+- ✅ Double-click vote submission (fixed with loading states)
 
-3.  **Access**:
-    The live site is available at: `https://<username>.github.io/smacktalk`
+## 📝 License
+
+MIT
+
+## 🤝 Contributing
+
+This is a personal project, but feel free to fork and modify!
+
+## 👨‍💻 Author
+
+Michael Geraci

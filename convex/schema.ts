@@ -17,6 +17,13 @@ export default defineSchema({
     name: v.string(),
     score: v.number(),
     isVip: v.boolean(),
+    // SmackTalk specific fields
+    hp: v.optional(v.number()),
+    maxHp: v.optional(v.number()),
+    knockedOut: v.optional(v.boolean()),
+    role: v.optional(v.string()), // "FIGHTER" | "CORNER_MAN"
+    teamId: v.optional(v.id("players")), // Linked to the "Team Captain" (Winner of the pairing)
+    isBot: v.optional(v.boolean()),
   }).index("by_game", ["gameId"]),
 
   // temporary for chat verification
@@ -41,7 +48,17 @@ export default defineSchema({
 
   votes: defineTable({
     promptId: v.id("prompts"),
-    playerId: v.id("players"),
     submissionId: v.id("submissions"),
+    playerId: v.id("players"),
   }).index("by_prompt", ["promptId"]),
+
+  suggestions: defineTable({
+    gameId: v.id("games"),
+    promptId: v.id("prompts"),
+    senderId: v.id("players"), // Corner Man
+    targetId: v.id("players"), // Captain
+    text: v.string(),
+  })
+    .index("by_game", ["gameId"])
+    .index("by_target", ["targetId", "promptId"]),
 });

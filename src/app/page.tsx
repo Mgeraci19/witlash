@@ -11,12 +11,15 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 export default function Home() {
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const createGame = useMutation(api.games.create);
-  const joinGame = useMutation(api.games.join);
+  const [isLoading, setIsLoading] = useState(false);
+  const createGame = useMutation(api.lobby.create);
+  const joinGame = useMutation(api.lobby.join);
   const router = useRouter();
 
   const handleCreate = async () => {
     if (!name) return alert("Please enter your name");
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       const { roomCode } = await createGame({});
       const { playerId } = await joinGame({ roomCode, playerName: name });
@@ -26,11 +29,14 @@ export default function Home() {
     } catch (e) {
       console.error(e);
       alert("Failed to create game");
+      setIsLoading(false);
     }
   };
 
   const handleJoin = async () => {
     if (!name || !roomCode) return alert("Please enter name and room code");
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       const code = roomCode.toUpperCase();
       const { playerId } = await joinGame({ roomCode: code, playerName: name });
@@ -39,6 +45,7 @@ export default function Home() {
       router.push(`/room?code=${code}`);
     } catch (e: any) {
       alert("Failed to join: " + (e.message || e));
+      setIsLoading(false);
     }
   };
 
@@ -60,8 +67,8 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Button onClick={handleCreate} className="w-full" variant="default">
-                Create Game
+              <Button onClick={handleCreate} className="w-full" variant="default" disabled={isLoading}>
+                {isLoading ? "Creating..." : "Create Game"}
               </Button>
             </div>
 
@@ -73,8 +80,8 @@ export default function Home() {
                 className="text-center uppercase"
                 maxLength={4}
               />
-              <Button onClick={handleJoin} className="w-full" variant="outline">
-                Join Game
+              <Button onClick={handleJoin} className="w-full" variant="outline" disabled={isLoading}>
+                {isLoading ? "Joining..." : "Join Game"}
               </Button>
             </div>
           </div>
