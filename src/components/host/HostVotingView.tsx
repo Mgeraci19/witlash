@@ -6,6 +6,7 @@ import { FighterHealthBar } from "./FighterHealthBar";
 import { BattleArena } from "./BattleArena";
 import { BattleSide } from "./animations/registry/types";
 import { CornerManAssignment } from "./CornerManAssignment";
+import { useBattleData } from "@/hooks/useBattleData";
 
 interface HostVotingViewProps {
   game: GameState;
@@ -42,6 +43,9 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   // Get current prompt and its submissions
   const currentPrompt = game.prompts?.find((p) => p._id === game.currentPromptId);
 
+  // Fetch battle data from backend (SINGLE SOURCE OF TRUTH for damage)
+  const battleData = useBattleData(game.currentPromptId);
+
   // Memoize filtered arrays
   const currentSubmissions = useMemo(
     () => game.submissions?.filter((s) => s.promptId === game.currentPromptId) || [],
@@ -52,8 +56,8 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     [game.votes, game.currentPromptId]
   );
 
-  // Calculate vote counts, winner, and damage
-  const { voteCounts, maxVotes, totalVotes, votersBySubmission, leftDamage, rightDamage } = useMemo(() => {
+  // Calculate vote counts, winner, and voters (damage now comes from backend)
+  const { voteCounts, maxVotes, totalVotes, votersBySubmission } = useMemo(() => {
     const counts: Record<string, number> = {};
     const voters: Record<string, string[]> = {};
     let max = 0;
@@ -71,87 +75,16 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
       }
     });
 
-    // Calculate total votes first
+    // Calculate total votes
     const total = currentVotes.length;
-
-    // Round multipliers (matches backend)
-    const getRoundMultiplier = (round: number): number => {
-      switch (round) {
-        case 1: return 1.0;   // 35 max damage
-        case 2: return 1.3;   // 45.5 max damage
-        case 3: return 1.0;   // 35 max damage
-        case 4: return 1.5;   // 52.5 max damage
-        default: return 1.0;
-      }
-    };
-
-    // Calculate damage based on votes (matches backend logic)
-    const DAMAGE_CAP = 35;
-    const COMBO_BONUS_DAMAGE = 15;
-    let leftDmg = 0;
-    let rightDmg = 0;
-
-    if (currentSubmissions.length === 2 && total > 0) {
-      const leftSubId = currentSubmissions[0]._id as string;
-      const rightSubId = currentSubmissions[1]._id as string;
-      const leftVotesFor = counts[leftSubId] || 0;
-      const rightVotesFor = counts[rightSubId] || 0;
-
-      // Check if it's a tie
-      const isTie = leftVotesFor === rightVotesFor;
-
-      if (isTie) {
-        // Tie: both take 50% of DAMAGE_CAP with round multiplier
-        const damage = 0.5 * DAMAGE_CAP * getRoundMultiplier(game.currentRound);
-        leftDmg = Math.floor(damage);
-        rightDmg = Math.floor(damage);
-        console.log(`[TIE] Both players take ${Math.floor(damage)} damage. Combos will reset (unless KO tiebreaker applies).`);
-      } else {
-        // Non-tie: Only loser takes damage
-        const loserIsLeft = leftVotesFor < rightVotesFor;
-
-        // Get winner's player data from submissions
-        const winnerSubmission = loserIsLeft ? currentSubmissions[1] : currentSubmissions[0];
-        const winnerPlayer = game.players.find((p) => p._id === winnerSubmission.playerId);
-        const winnerStreak = winnerPlayer?.winStreak || 0;
-
-        const loserVotesFor = loserIsLeft ? leftVotesFor : rightVotesFor;
-        const votesAgainst = total - loserVotesFor;
-
-        console.log(`[COMBO CHECK] Winner: ${winnerPlayer?.name}, winStreak: ${winnerStreak}, base damage: ${((votesAgainst / total) * DAMAGE_CAP * getRoundMultiplier(game.currentRound)).toFixed(0)}`);
-
-        let damage = (votesAgainst / total) * DAMAGE_CAP * getRoundMultiplier(game.currentRound);
-
-        // Apply combo bonuses (matches backend logic)
-        if (winnerStreak === 2) {
-          // 3rd win = instant KO
-          damage = 999;
-          console.log(`[COMBO x3] ${winnerPlayer?.name} has 2-win streak, dealing instant KO damage!`);
-        } else if (winnerStreak === 1) {
-          // 2nd win = bonus damage
-          damage += COMBO_BONUS_DAMAGE;
-          console.log(`[COMBO x2] ${winnerPlayer?.name} has 1-win streak, dealing +${COMBO_BONUS_DAMAGE} bonus damage!`);
-        }
-
-        if (loserIsLeft) {
-          leftDmg = Math.floor(damage);
-          rightDmg = 0;
-        } else {
-          leftDmg = 0;
-          rightDmg = Math.floor(damage);
-        }
-      }
-    }
 
     return {
       voteCounts: counts,
       maxVotes: max,
       totalVotes: total,
       votersBySubmission: voters,
-      leftDamage: leftDmg,
-      rightDamage: rightDmg,
     };
-  }, [currentVotes, currentSubmissions, game.players, game.currentRound]);
+  }, [currentVotes]);
 
   // Get battlers with all info
   const battlers = useMemo(() => {
@@ -409,8 +342,8 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
           isReveal={isReveal}
           promptId={game.currentPromptId}
           promptText={currentPrompt?.text}
-          leftDamage={leftDamage}
-          rightDamage={rightDamage}
+          leftDamage={battleData.leftDamage}
+          rightDamage={battleData.rightDamage}
           onBattleComplete={handleBattleComplete}
           onDamageApplied={handleDamageApplied}
         />

@@ -15,6 +15,7 @@ import type * as bots from "../bots.js";
 import type * as engine from "../engine.js";
 import type * as game from "../game.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_battleData from "../lib/battleData.js";
 import type * as lib_constants from "../lib/constants.js";
 import type * as lib_gameLogic from "../lib/gameLogic.js";
 import type * as lib_phases from "../lib/phases.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   engine: typeof engine;
   game: typeof game;
   "lib/auth": typeof lib_auth;
+  "lib/battleData": typeof lib_battleData;
   "lib/constants": typeof lib_constants;
   "lib/gameLogic": typeof lib_gameLogic;
   "lib/phases": typeof lib_phases;

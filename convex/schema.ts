@@ -32,6 +32,7 @@ export default defineSchema({
     isBot: v.optional(v.boolean()),
     avatar: v.optional(v.string()), // Base64 PNG avatar image
     winStreak: v.optional(v.number()), // Track consecutive wins for combo bonuses
+    lossStreak: v.optional(v.number()), // Track consecutive losses
   }).index("by_game", ["gameId"]),
 
   // temporary for chat verification
