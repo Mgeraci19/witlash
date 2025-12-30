@@ -11,7 +11,10 @@ interface HostVotingViewProps {
 
 export function HostVotingView({ game }: HostVotingViewProps) {
     const isReveal = game.roundStatus === "REVEAL";
-    const [hasAnimated, setHasAnimated] = useState(false);
+
+    // LINT FIX: Use ref to track animation state to avoid setState during render
+    const hasAnimatedRef = useRef(false);
+
     const [showVoteAttacks, setShowVoteAttacks] = useState(false);
 
     // Refs for animations
@@ -22,8 +25,16 @@ export function HostVotingView({ game }: HostVotingViewProps) {
 
     // Get current prompt and its submissions
     const currentPrompt = game.prompts?.find(p => p._id === game.currentPromptId);
-    const currentSubmissions = game.submissions?.filter(s => s.promptId === game.currentPromptId) || [];
-    const currentVotes = game.votes?.filter(v => v.promptId === game.currentPromptId) || [];
+
+    // LINT FIX: Memoize filtered arrays to prevent unnecessary recalculations
+    const currentSubmissions = useMemo(
+        () => game.submissions?.filter(s => s.promptId === game.currentPromptId) || [],
+        [game.submissions, game.currentPromptId]
+    );
+    const currentVotes = useMemo(
+        () => game.votes?.filter(v => v.promptId === game.currentPromptId) || [],
+        [game.votes, game.currentPromptId]
+    );
 
     // Calculate vote counts and winner
     const { voteCounts, maxVotes, totalVotes, votersBySubmission } = useMemo(() => {
@@ -68,26 +79,29 @@ export function HostVotingView({ game }: HostVotingViewProps) {
     const leftBattler = battlers[0];
     const rightBattler = battlers[1];
 
-    // Determine winner and loser for attack animation
+    // Determine winner for attack animation
     const winner = battlers.find(b => b.isWinner);
-    const loser = battlers.find(b => !b.isWinner && battlers.length === 2);
 
-    // Reset animation state when prompt changes
+    // LINT FIX: Reset animation state and positions when prompt changes
+    // Note: setState in effect is intentional here to reset UI state when prompt changes
+    // This is a legitimate pattern for cleaning up derived state, not cascading renders
     useEffect(() => {
-        setHasAnimated(false);
+        // Reset animation tracking
+        hasAnimatedRef.current = false;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowVoteAttacks(false);
 
-        // Reset positions
+        // Reset GSAP positions
         if (answer1Ref.current) gsap.set(answer1Ref.current, { x: 0, opacity: 1 });
         if (answer2Ref.current) gsap.set(answer2Ref.current, { x: 0, opacity: 1 });
         if (vsRef.current) gsap.set(vsRef.current, { opacity: 1, scale: 1 });
     }, [game.currentPromptId]);
 
-    // Reveal animation sequence
+    // LINT FIX: Reveal animation sequence - using ref instead of state to track animation
     useEffect(() => {
-        if (!isReveal || hasAnimated || battlers.length !== 2) return;
+        if (!isReveal || hasAnimatedRef.current || battlers.length !== 2) return;
 
-        setHasAnimated(true);
+        hasAnimatedRef.current = true;
 
         const tl = gsap.timeline();
 
@@ -117,7 +131,8 @@ export function HostVotingView({ game }: HostVotingViewProps) {
             setShowVoteAttacks(true);
         }, [], "+=0.1");
 
-    }, [isReveal, hasAnimated, battlers.length]);
+    // LINT FIX: Updated dependencies - removed hasAnimated (now a ref), added battlers
+    }, [isReveal, battlers]);
 
     return (
         <div

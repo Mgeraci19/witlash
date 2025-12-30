@@ -137,7 +137,7 @@ export function GameStatusBanner({ game, playerId }: GameStatusBannerProps) {
             </p>
 
             {currentPrompt && (
-                <p>Current prompt: "{currentPrompt.text}"</p>
+                <p>Current prompt: &ldquo;{currentPrompt.text}&rdquo;</p>
             )}
 
             {availableActions.length > 0 && (

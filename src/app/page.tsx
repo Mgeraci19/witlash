@@ -49,7 +49,8 @@ export default function Home() {
       sessionStorage.setItem("playerId", playerId);
       sessionStorage.setItem("sessionToken", sessionToken);
       sessionStorage.setItem("playerName", name);
-      router.push(`/room?code=${code}`);
+      // Redirect to avatar creation before entering lobby
+      router.push(`/avatar?code=${code}`);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to join game";
       showError("join-failed", message);

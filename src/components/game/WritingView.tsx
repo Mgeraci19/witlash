@@ -5,17 +5,30 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { useState, useEffect } from "react";
 import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { GameState } from "@/lib/types";
+
+interface PromptCardProps {
+    prompt: { _id: Id<"prompts">; text: string };
+    initialValue: string;
+    isDone: boolean;
+    onSubmit: (text: string) => Promise<void>;
+    onSetValue?: (setter: (value: string) => void) => void;
+    showError: (code: string, message: string) => void;
+}
 
 // Helper Component to handle local state pre-filling
-function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showError }: any) {
+function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showError }: PromptCardProps) {
     const [value, setValue] = useState("");
 
-    // Initialize with prefill on mount
+    // Initialize with prefill on mount or when value is cleared
     useEffect(() => {
         if (initialValue && !value) {
+            // LINT FIX: setState to initialize from prop is intentional
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setValue(initialValue);
         }
-    }, [initialValue]);
+    // LINT FIX: Added 'value' to dependencies to avoid stale closure
+    }, [initialValue, value]);
 
     // Expose setValue to parent via callback
     useEffect(() => {
@@ -58,7 +71,7 @@ function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showEr
                             data-prompt-id={prompt._id}
                             data-has-value={value.length > 0}
                             aria-label={`Submit answer for: ${prompt.text}`}
-                            onClick={() => onSubmit(value).catch((e: any) => showError("submit-failed", e.message))}
+                            onClick={() => onSubmit(value).catch((e) => showError("submit-failed", (e as Error).message))}
                         >
                             Submit
                         </Button>
@@ -69,16 +82,28 @@ function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showEr
     );
 }
 
+interface CornerManSuggestionCardProps {
+    prompt: { _id: Id<"prompts">; text: string };
+    game: GameState;
+    playerId: Id<"players"> | null;
+    sessionToken: string;
+    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    captainIsBot?: boolean;
+    captainId: Id<"players"> | undefined;
+    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    showError: (code: string, message: string) => void;
+}
+
 // Helper Component for Corner Man Input
-function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitSuggestion, captainIsBot, captainId, submitAnswerForBot, showError }: any) {
+function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitSuggestion, captainIsBot, captainId, submitAnswerForBot, showError }: CornerManSuggestionCardProps) {
     const [suggestionText, setSuggestionText] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const mySuggestions = game.suggestions?.filter((s: any) => s.promptId === prompt._id && s.senderId === playerId) || [];
+    const mySuggestions = game.suggestions?.filter((s) => s.promptId === prompt._id && s.senderId === playerId) || [];
     const promptIdSafe = prompt._id;
 
     // Check if Captain has ALREADY submitted
-    const captainSubmission = game.submissions?.find((s: any) => s.promptId === prompt._id && s.playerId === captainId);
+    const captainSubmission = game.submissions?.find((s) => s.promptId === prompt._id && s.playerId === captainId);
     if (captainSubmission) {
         return (
             <Card
@@ -90,7 +115,7 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
                 <CardHeader><CardTitle className="text-lg">{prompt.text}</CardTitle></CardHeader>
                 <CardContent>
                     <div id={`corner-submitted-${promptIdSafe}`} className="text-green-600 font-bold">Answer Submitted by Team!</div>
-                    <div className="text-sm text-gray-500 mt-1">"{captainSubmission.text}"</div>
+                    <div className="text-sm text-gray-500 mt-1">&ldquo;{captainSubmission.text}&rdquo;</div>
                 </CardContent>
             </Card>
         );
@@ -133,8 +158,8 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
                                     text: suggestionText
                                 });
                                 setSuggestionText("");
-                            } catch (e: any) {
-                                showError("action-failed", e.message);
+                            } catch (e) {
+                                showError("action-failed", (e as Error).message);
                             }
                         }}
                     >
@@ -161,8 +186,8 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
                                         text: suggestionText
                                     });
                                     setIsSubmitted(true);
-                                } catch (e: any) {
-                                    showError("submit-failed", e.message);
+                                } catch (e) {
+                                    showError("submit-failed", (e as Error).message);
                                 }
                             }}
                         >
@@ -177,7 +202,7 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
                 >
                     My Suggestions:
                     <ul className="list-disc pl-4 mt-1">
-                        {mySuggestions.map((s: any, i: number) => <li key={i}>{s.text}</li>)}
+                        {mySuggestions.map((s, i) => <li key={i}>{s.text}</li>)}
                     </ul>
                 </div>
             </CardContent>
@@ -185,16 +210,14 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
     );
 }
 
-import { GameState } from "@/lib/types";
-
 interface WritingViewProps {
     game: GameState;
     playerId: Id<"players"> | null;
     sessionToken: string;
-    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
-    submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
-    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
-    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
+    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
+    submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
     answers?: Record<string, string>;
 }
 
@@ -244,8 +267,8 @@ export function WritingView({ game, playerId, sessionToken, startGame, submitAns
                 </div>
 
 
-                {captainPrompts.map((p: any) => {
-                    const captainPlayer = game.players.find((pl: any) => pl._id === myTeamId);
+                {captainPrompts.map((p) => {
+                    const captainPlayer = game.players.find((pl) => pl._id === myTeamId);
                     return (
                         <CornerManSuggestionCard
                             key={p._id}
@@ -296,14 +319,14 @@ export function WritingView({ game, playerId, sessionToken, startGame, submitAns
                     variant="destructive"
                     size="sm"
                     aria-label="Reset the current writing phase (Admin only)"
-                    onClick={() => playerId && startGame({ gameId: game._id, playerId, sessionToken }).catch((e: any) => showError("action-failed", e.message))}
+                    onClick={() => playerId && startGame({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
                 >
                     Reset Phase
                 </Button>
             </div>
 
             {game.prompts
-                ?.filter((p: any) => p.assignedTo?.includes(playerId))
+                ?.filter((p) => p.assignedTo?.includes(playerId))
                 .map((p) => {
                     const isSubmitted = submittedPrompts.has(p._id);
                     const dbSubmission = game.submissions?.find((s) => s.promptId === p._id && s.playerId === playerId);

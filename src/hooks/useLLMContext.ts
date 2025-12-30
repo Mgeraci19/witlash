@@ -140,7 +140,7 @@ export function useLLMContext(game: GameState | null | undefined, playerId: Id<"
 
             if (game.roundStatus === "VOTING" && !hasVoted && !isBattling && !isSupporting) {
                 const submissions = game.submissions?.filter(s => s.promptId === game.currentPromptId) || [];
-                submissions.forEach((sub, index) => {
+                submissions.forEach((sub) => {
                     if (sub.playerId !== playerId) {
                         availableActions.push({
                             action: "vote",

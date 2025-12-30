@@ -26,6 +26,7 @@ export default defineSchema({
     role: v.optional(v.string()), // "FIGHTER" | "CORNER_MAN"
     teamId: v.optional(v.id("players")), // Linked to the "Team Captain" (Winner of the pairing)
     isBot: v.optional(v.boolean()),
+    avatar: v.optional(v.string()), // Base64 PNG avatar image
   }).index("by_game", ["gameId"]),
 
   // temporary for chat verification
@@ -63,4 +64,10 @@ export default defineSchema({
   })
     .index("by_game", ["gameId"])
     .index("by_target", ["targetId", "promptId"]),
+
+  // Pre-made avatar templates for selection/bots
+  defaultAvatars: defineTable({
+    name: v.string(), // "Robot", "Ninja", etc.
+    imageData: v.string(), // Base64 PNG
+  }),
 });

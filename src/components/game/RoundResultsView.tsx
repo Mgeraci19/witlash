@@ -9,7 +9,7 @@ interface RoundResultsViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    nextRound: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
+    nextRound: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
 }
 
 export function RoundResultsView({ game, playerId, sessionToken, isVip, nextRound }: RoundResultsViewProps) {
@@ -61,7 +61,7 @@ export function RoundResultsView({ game, playerId, sessionToken, isVip, nextRoun
                     aria-label={`Start Round ${game.currentRound + 1}`}
                     className="mt-8 w-full animate-pulse"
                     size="lg"
-                    onClick={() => playerId && nextRound({ gameId: game._id, playerId, sessionToken }).catch((e: any) => showError("action-failed", e.message))}
+                    onClick={() => playerId && nextRound({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
                 >
                     Start Round {game.currentRound + 1} ⏭️
                 </Button>

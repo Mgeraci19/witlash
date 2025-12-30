@@ -10,7 +10,6 @@ export function HostWritingView({ game }: HostWritingViewProps) {
     const fighters = game.players.filter(p => p.role === "FIGHTER" && !p.isBot);
 
     // Count submissions for current round
-    const currentPrompts = game.prompts || [];
     const submissions = game.submissions || [];
 
     // Calculate who has submitted

@@ -13,6 +13,8 @@ export default function ConvexClientProvider({
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
+        // LINT FIX: Client-side mounting flag to prevent hydration mismatch
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsMounted(true);
     }, []);
 

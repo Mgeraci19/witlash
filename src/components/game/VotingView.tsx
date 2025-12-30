@@ -10,8 +10,8 @@ interface VotingViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    submitVote: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; submissionId: Id<"submissions"> }) => Promise<any>;
-    nextBattle: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
+    submitVote: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; submissionId: Id<"submissions"> }) => Promise<void>;
+    nextBattle: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
 }
 
 export function VotingView({ game, playerId, sessionToken, isVip, submitVote, nextBattle }: VotingViewProps) {
@@ -102,7 +102,7 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
                         id="force-next-button"
                         data-action="force-next"
                         aria-label="Force advance to next battle"
-                        onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e: any) => showError("action-failed", e.message))}
+                        onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
                     >
                         Force Next
                     </Button>
@@ -141,7 +141,7 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
                         aria-label="Advance to next battle"
                         className="mt-2 w-full animate-bounce"
                         size="lg"
-                        onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e: any) => showError("action-failed", e.message))}
+                        onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
                     >
                         Next Battle ⏭️
                     </Button>
@@ -220,14 +220,14 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
                                                 promptId: game.currentPromptId!,
                                                 submissionId: s._id
                                             });
-                                        } catch (e: any) {
-                                            showError("vote-failed", e.message);
+                                        } catch (e) {
+                                            showError("vote-failed", (e as Error).message);
                                         } finally {
                                             setIsSubmitting(false);
                                         }
                                     }}
                                 >
-                                    <span id={`submission-text-${index}`} className={`font-bold text-xl ${isWinner ? "text-yellow-800" : ""}`}>"{s.text}"</span>
+                                    <span id={`submission-text-${index}`} className={`font-bold text-xl ${isWinner ? "text-yellow-800" : ""}`}>&ldquo;{s.text}&rdquo;</span>
 
                                     {!votingState?.isReveal && isMine && (
                                         <span id={`your-answer-label-${index}`} className="text-xs mt-2 text-gray-500 uppercase font-bold tracking-widest">(Your Answer)</span>

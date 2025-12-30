@@ -5,6 +5,7 @@ interface FighterPlaceholderProps {
     isKnockedOut?: boolean;
     side?: "left" | "right";
     size?: "small" | "medium" | "large";
+    avatar?: string; // Base64 PNG image
 }
 
 export function FighterPlaceholder({
@@ -14,6 +15,7 @@ export function FighterPlaceholder({
     isKnockedOut = false,
     side = "left",
     size = "medium",
+    avatar,
 }: FighterPlaceholderProps) {
     const sizeClasses = {
         small: "w-24 h-32",
@@ -32,20 +34,25 @@ export function FighterPlaceholder({
             data-hp={hp}
             data-knocked-out={isKnockedOut}
         >
-            {/* Avatar Placeholder */}
+            {/* Avatar */}
             <div
                 className={`${sizeClasses[size]} bg-gray-700 rounded-lg border-4 ${
                     isKnockedOut ? "border-red-500 opacity-50" : "border-gray-500"
                 } flex items-center justify-center relative overflow-hidden`}
                 style={{ transform: side === "right" ? "scaleX(-1)" : undefined }}
             >
-                {/* Placeholder silhouette */}
-                <div className="text-gray-600 text-6xl">
-                    {isKnockedOut ? "X" : "?"}
-                </div>
-
-                {/* Future: Image will go here */}
-                {/* <img src={avatarUrl} alt={name} className="w-full h-full object-cover" /> */}
+                {avatar ? (
+                    <img
+                        src={avatar}
+                        alt={`${name}'s avatar`}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    /* Placeholder silhouette */
+                    <div className="text-gray-600 text-6xl">
+                        {isKnockedOut ? "X" : "?"}
+                    </div>
+                )}
             </div>
 
             {/* Name plate */}

@@ -21,6 +21,6 @@ export function getPromptText(availableIndices: number[], newUsedIndices: number
 
 export function getAvailableIndices(usedPromptIndices: number[]) {
     const usedIndices = new Set(usedPromptIndices || []);
-    let availableIndices = PROMPTS.map((_, i) => i).filter(i => !usedIndices.has(i));
+    const availableIndices = PROMPTS.map((_, i) => i).filter(i => !usedIndices.has(i));
     return { availableIndices, usedIndices: [...usedIndices] };
 }

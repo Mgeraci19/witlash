@@ -15,7 +15,7 @@ export const clearDB = mutation({
         ];
 
         for (const table of tables) {
-            const docs = await ctx.db.query(table as any).collect();
+            const docs = await ctx.db.query(table as "games" | "players" | "messages" | "prompts" | "submissions" | "votes" | "suggestions").collect();
             for (const doc of docs) {
                 await ctx.db.delete(doc._id);
             }

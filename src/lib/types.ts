@@ -1,4 +1,4 @@
-import { Doc, Id } from "../../convex/_generated/dataModel";
+import { Doc } from "../../convex/_generated/dataModel";
 
 export type GameState = Doc<"games"> & {
     players: Doc<"players">[];

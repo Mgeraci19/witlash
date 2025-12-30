@@ -3,17 +3,20 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { GameState } from "@/lib/types";
 import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { useRouter } from "next/navigation";
 
 interface LobbyViewProps {
     game: GameState;
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
+    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
 }
 
 export function LobbyView({ game, playerId, sessionToken, isVip, startGame }: LobbyViewProps) {
     const { error, showError, clearError } = useErrorState();
+    const router = useRouter();
+    const myPlayer = game.players.find(p => p._id === playerId);
 
     return (
         <div
@@ -27,11 +30,29 @@ export function LobbyView({ game, playerId, sessionToken, isVip, startGame }: Lo
             <ErrorBanner error={error} onDismiss={clearError} />
 
             <h3 id="lobby-title" className="font-bold">Waiting for players...</h3>
+
+            {/* Edit Avatar Button */}
+            <div className="flex justify-center">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/avatar?code=${game.roomCode}&edit=true`)}
+                    className="flex items-center gap-2"
+                >
+                    {myPlayer?.avatar ? (
+                        <img src={myPlayer.avatar} alt="Your avatar" className="w-6 h-6 rounded" />
+                    ) : (
+                        <span className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center text-xs">?</span>
+                    )}
+                    Edit Avatar
+                </Button>
+            </div>
+
             <ul
                 id="lobby-player-list"
                 data-testid="lobby-player-list"
                 data-count={game.players.length}
-                className="space-y-1 bg-white p-4 rounded border"
+                className="space-y-2 bg-white p-4 rounded border"
             >
                 {game.players.map((p) => (
                     <li
@@ -41,9 +62,15 @@ export function LobbyView({ game, playerId, sessionToken, isVip, startGame }: Lo
                         data-is-vip={p.isVip}
                         data-is-me={p._id === playerId}
                         data-is-bot={p.isBot}
-                        className="flex justify-between"
+                        className="flex items-center gap-3"
                     >
-                        <span>{p.name} {p._id === playerId && "(You)"}</span>
+                        {/* Avatar thumbnail */}
+                        {p.avatar ? (
+                            <img src={p.avatar} alt={`${p.name}'s avatar`} className="w-10 h-10 rounded border-2 border-gray-300 object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded border-2 border-gray-300 bg-gray-200 flex items-center justify-center text-gray-500">?</div>
+                        )}
+                        <span className="flex-1">{p.name} {p._id === playerId && "(You)"}</span>
                         {p.isVip && <span aria-label="VIP Player">👑</span>}
                     </li>
                 ))}
@@ -62,7 +89,7 @@ export function LobbyView({ game, playerId, sessionToken, isVip, startGame }: Lo
                         className="w-full"
                         size="lg"
                         disabled={game.players.length < 1}
-                        onClick={() => playerId && startGame({ gameId: game._id, playerId, sessionToken }).catch((e: any) => showError("action-failed", e.message))}
+                        onClick={() => playerId && startGame({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
                     >
                         Start Game
                     </Button>

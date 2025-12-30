@@ -123,8 +123,8 @@ export const nextBattle = mutation({
 
         // Check for Round 4 Winner (Sudden Death)
         if (game.currentRound === 4) {
-            const activePlayers = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", args.gameId)).collect();
-            const survivors = activePlayers.filter((p: any) => !p.knockedOut);
+            const activePlayers = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", args.gameId)).collect();
+            const survivors = activePlayers.filter((p) => !p.knockedOut);
 
             if (survivors.length === 1) {
                 console.log(`[GAME] Round 4 Ended: Winner is ${survivors[0].name}`);
@@ -142,8 +142,8 @@ export const nextBattle = mutation({
 
         // Check for Round 3 Early Exit (Top 2 Teams)
         if (game.currentRound === 3) {
-            const activePlayers = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", args.gameId)).collect();
-            const survivorCount = activePlayers.filter((p: any) => !p.knockedOut).length;
+            const activePlayers = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", args.gameId)).collect();
+            const survivorCount = activePlayers.filter((p) => !p.knockedOut).length;
 
             if (survivorCount <= 2) {
                 console.log(`[GAME] Round 3 Early Exit: Only ${survivorCount} participants remain.`);

@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { Id } from "../../../convex/_generated/dataModel";
-
 import { GameState } from "@/lib/types";
 
 interface GameResultsViewProps {

@@ -28,7 +28,7 @@ export const setupRound2Test = mutation({
         await ctx.db.patch(gameId, { currentPromptId: prompt1 });
 
         // 4. Create Submissions for Prompt 1
-        const s1 = await ctx.db.insert("submissions", { promptId: prompt1, playerId: p1, text: "Weak Answer" });
+        await ctx.db.insert("submissions", { promptId: prompt1, playerId: p1, text: "Weak Answer" });
         const s2 = await ctx.db.insert("submissions", { promptId: prompt1, playerId: p2, text: "Strong Answer" });
 
         // 5. Create Votes (All for Killer, so Victim takes damage)
@@ -48,7 +48,6 @@ export const checkGameStatus = query({
     args: { gameId: v.id("games") },
     handler: async (ctx, args) => {
         const game = await ctx.db.get(args.gameId);
-        const p1 = await ctx.db.query("players").withIndex("by_game", q => q.eq("gameId", args.gameId)).first(); // Just picking one to check KO status if needed, but query by ID is better
         return {
             currentPromptId: game?.currentPromptId,
             roundStatus: game?.roundStatus

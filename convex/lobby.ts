@@ -1,28 +1,29 @@
-import { mutation, query } from "./_generated/server";
+import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { setupPhase1 } from "./lib/phases";
 import { api } from "./_generated/api";
 import { generateSessionToken, validatePlayerName, validateVipPlayer } from "./lib/auth";
+import { MutationCtx } from "./_generated/server";
 
 // Cleanup games older than 24 hours
-async function cleanupOldGames(ctx: any) {
+async function cleanupOldGames(ctx: MutationCtx) {
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const oldGames = await ctx.db
         .query("games")
-        .filter((q: any) => q.lt(q.field("_creationTime"), oneDayAgo))
+        .filter((q) => q.lt(q.field("_creationTime"), oneDayAgo))
         .collect();
 
     for (const game of oldGames) {
         // Delete all related records
-        const players = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", game._id)).collect();
-        const prompts = await ctx.db.query("prompts").withIndex("by_game", (q: any) => q.eq("gameId", game._id)).collect();
-        const messages = await ctx.db.query("messages").withIndex("by_game", (q: any) => q.eq("gameId", game._id)).collect();
-        const suggestions = await ctx.db.query("suggestions").withIndex("by_game", (q: any) => q.eq("gameId", game._id)).collect();
+        const players = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", game._id)).collect();
+        const prompts = await ctx.db.query("prompts").withIndex("by_game", (q) => q.eq("gameId", game._id)).collect();
+        const messages = await ctx.db.query("messages").withIndex("by_game", (q) => q.eq("gameId", game._id)).collect();
+        const suggestions = await ctx.db.query("suggestions").withIndex("by_game", (q) => q.eq("gameId", game._id)).collect();
 
         // Delete submissions and votes for each prompt
         for (const prompt of prompts) {
-            const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q: any) => q.eq("promptId", prompt._id)).collect();
-            const votes = await ctx.db.query("votes").withIndex("by_prompt", (q: any) => q.eq("promptId", prompt._id)).collect();
+            const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q) => q.eq("promptId", prompt._id)).collect();
+            const votes = await ctx.db.query("votes").withIndex("by_prompt", (q) => q.eq("promptId", prompt._id)).collect();
             for (const sub of submissions) await ctx.db.delete(sub._id);
             for (const vote of votes) await ctx.db.delete(vote._id);
             await ctx.db.delete(prompt._id);
@@ -115,13 +116,13 @@ export const startGame = mutation({
         const game = await ctx.db.get(args.gameId);
         if (!game || game.status !== "LOBBY") throw new Error("Cannot start");
 
-        let players = await ctx.db
+        const players = await ctx.db
             .query("players")
             .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
             .collect();
 
         // Bot Filling Logic
-        let currentCount = players.length;
+        const currentCount = players.length;
         const MIN_PLAYERS = 6;
         let targetCount = Math.max(currentCount, MIN_PLAYERS);
         if (targetCount % 2 !== 0) targetCount++;

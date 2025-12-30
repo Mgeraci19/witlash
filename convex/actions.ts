@@ -114,8 +114,6 @@ export const submitVote = mutation({
         const submissionsInBattle = await ctx.db.query("submissions").withIndex("by_prompt", q => q.eq("promptId", args.promptId)).collect();
         const battlerIds = submissionsInBattle.map(s => s.playerId);
 
-        const game = await ctx.db.get(args.gameId);
-
         // Anti-Cheat: Battlers cannot vote in their own battle
         if (battlerIds.includes(args.playerId)) {
             console.warn(`[VOTE] Battler ${player.name} tried to vote in their own battle!`);

@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Id } from "../../../convex/_generated/dataModel";
 import { LobbyView } from "@/components/game/LobbyView";
 import { WritingView } from "@/components/game/WritingView";
@@ -58,6 +58,8 @@ function RoomContent() {
         if (!storedId || !storedToken) {
             router.push("/");
         } else {
+            // LINT FIX: Initializing from sessionStorage on mount is intentional
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPlayerId(storedId as Id<"players">);
             setSessionToken(storedToken);
         }
@@ -105,8 +107,8 @@ function RoomContent() {
         try {
             await sendMessage({ gameId: game._id, playerId, sessionToken, text: messageText });
             setMessageText("");
-        } catch (e: any) {
-            showError("chat-failed", e.message);
+        } catch (e) {
+            showError("chat-failed", (e as Error).message);
         }
     };
 
@@ -205,7 +207,7 @@ function RoomContent() {
                                 className="h-64 overflow-y-auto border p-4 rounded bg-white shadow-inner flex flex-col gap-2"
                             >
                                 {game.messages && game.messages.length === 0 && <div id="no-messages" className="text-gray-400 italic">No messages yet</div>}
-                                {game.messages && game.messages.map((m: any, i: number) => {
+                                {game.messages && game.messages.map((m, i) => {
                                     const sender = game.players.find(p => p._id === m.playerId)?.name || "Unknown";
                                     const isMe = m.playerId === playerId;
                                     return (

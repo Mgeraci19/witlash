@@ -53,7 +53,8 @@ export const getForHost = query({
         const suggestions = await ctx.db.query("suggestions").withIndex("by_game", q => q.eq("gameId", game._id)).collect();
 
         // Don't expose hostToken to client
-        const { hostToken: _, ...gameWithoutToken } = game;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { hostToken: _hostToken, ...gameWithoutToken } = game;
         return { ...gameWithoutToken, players: sanitizedPlayers, messages, prompts, submissions, votes, suggestions };
     },
 });

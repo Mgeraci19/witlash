@@ -1,9 +1,10 @@
-import { Id } from "../_generated/dataModel";
-import { PROMPTS, BOT_WORDS } from "./constants";
+import { Id, Doc } from "../_generated/dataModel";
+import { MutationCtx } from "../_generated/server";
+import { PROMPTS } from "./constants";
 import { api } from "../_generated/api";
 import { getAvailableIndices, getPromptText } from "./promptUtils";
 
-export async function setupPhase1(ctx: any, gameId: Id<"games">, players: any[]) {
+export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 1 (Series Matchups) for ${players.length} players`);
 
     // 1. Shuffle players
@@ -11,7 +12,7 @@ export async function setupPhase1(ctx: any, gameId: Id<"games">, players: any[])
 
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
 
     // Helpers
     const getPrompts = (count: number) => {
@@ -64,7 +65,7 @@ export async function setupPhase1(ctx: any, gameId: Id<"games">, players: any[])
 }
 
 // Bot Helper
-export function hasHumanCornerMan(captainId: Id<"players">, allPlayers: any[]) {
+export function hasHumanCornerMan(captainId: Id<"players">, allPlayers: Doc<"players">[]) {
     return allPlayers.some(p => p.role === "CORNER_MAN" && p.teamId === captainId && !p.isBot);
 }
 
@@ -72,7 +73,7 @@ export function hasHumanCornerMan(captainId: Id<"players">, allPlayers: any[]) {
 // Removed local autoAnswer, moved to bots.ts
 
 
-export async function setupPhase2(ctx: any, gameId: Id<"games">, players: any[]) {
+export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 2 (The Cull) for ${players.length} players`);
 
     // 1. Identify Captains (Players who own a Corner Man)
@@ -92,7 +93,7 @@ export async function setupPhase2(ctx: any, gameId: Id<"games">, players: any[])
 
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
 
     const getPrompts = (count: number) => {
         const selected = [];
@@ -133,7 +134,7 @@ export async function setupPhase2(ctx: any, gameId: Id<"games">, players: any[])
     await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
 }
 
-export async function resolvePhase2(ctx: any, gameId: Id<"games">) {
+export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
     console.log(`[GAME] Resolving Phase 2 (Executions)`);
     // "One Must Fall" Logic: Active players who fought and have lower HP than opponent die.
 
@@ -142,14 +143,14 @@ export async function resolvePhase2(ctx: any, gameId: Id<"games">) {
     // Wait, the rule is "If after 3 fights, both > 0 HP, Lower One is executed".
     // If someone was KO'd by damage mid-round, they are already KO'd.
 
-    const players = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", gameId)).collect();
-    const survivors = players.filter((p: any) => !p.knockedOut);
+    const players = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();
+    const survivors = players.filter((p) => !p.knockedOut);
 
     // We need to re-identify the Pairs to compare them.
     // We can look at prompts from Round 2.
     // Or just group by who fought whom.
 
-    const r2Prompts = await ctx.db.query("prompts").withIndex("by_game", (q: any) => q.eq("gameId", gameId)).collect();
+    const r2Prompts = await ctx.db.query("prompts").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();
 
     // Map of PlayerID -> OpponentID
     const pairings = new Map<string, string>();
@@ -168,7 +169,7 @@ export async function resolvePhase2(ctx: any, gameId: Id<"games">) {
         const opponentId = pairings.get(p._id);
 
         if (opponentId) {
-            const opponent = players.find((pl: any) => pl._id === opponentId);
+            const opponent = players.find((pl) => pl._id === opponentId);
 
             // If opponent is already KO'd naturally, P wins.
             if (!opponent || opponent.knockedOut) {
@@ -204,11 +205,11 @@ export async function resolvePhase2(ctx: any, gameId: Id<"games">) {
     }
 }
 
-export async function setupPhase3(ctx: any, gameId: Id<"games">, players: any[]) {
+export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 3: The Gauntlet`);
 
     // Active Teams = Players who are NOT Knocked Out. (Corner men are attached to them via teamId, but prompts go to Fighter)
-    const activeFighters = players.filter((p: any) => !p.knockedOut);
+    const activeFighters = players.filter((p) => !p.knockedOut);
     console.log(`[GAME] Active Fighters for Gauntlet: ${activeFighters.length}`);
 
     if (activeFighters.length < 2) {
@@ -222,7 +223,7 @@ export async function setupPhase3(ctx: any, gameId: Id<"games">, players: any[])
 
     // Reuse prompt picker
     const game = await ctx.db.get(gameId);
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -239,7 +240,7 @@ export async function setupPhase3(ctx: any, gameId: Id<"games">, players: any[])
         const shuffled = [...activeFighters].sort(() => Math.random() - 0.5);
 
         for (let i = 0; i < shuffled.length; i += 2) {
-            let p1 = shuffled[i];
+            const p1 = shuffled[i];
             let p2 = i + 1 < shuffled.length ? shuffled[i + 1] : shuffled[0]; // Wrap around if odd
 
             // avoid self-match if odd and length=1 (not possible as we checked length < 2)
@@ -266,12 +267,12 @@ export async function setupPhase3(ctx: any, gameId: Id<"games">, players: any[])
     await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
 }
 
-export async function setupPhase4(ctx: any, gameId: Id<"games">, players: any[]) {
+export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 4: The Final Showdown`);
 
     // 1. Identify the Final 2 Fighters
-    const activeFighters = players.filter((p: any) => !p.knockedOut);
-    console.log(`[GAME] Finalists: ${activeFighters.map((p: any) => p.name).join(", ")}`);
+    const activeFighters = players.filter((p) => !p.knockedOut);
+    console.log(`[GAME] Finalists: ${activeFighters.map((p) => p.name).join(", ")}`);
 
     if (activeFighters.length !== 2) {
         console.warn(`[GAME] Phase 4 Error: Expected 2 fighters, found ${activeFighters.length}`);
@@ -281,7 +282,7 @@ export async function setupPhase4(ctx: any, gameId: Id<"games">, players: any[])
 
     // 2. Reset HP to 100 for Finalists
     // If more than 2 survivors, pick top 2 by HP
-    activeFighters.sort((a: any, b: any) => (b.hp ?? 0) - (a.hp ?? 0));
+    activeFighters.sort((a, b) => (b.hp ?? 0) - (a.hp ?? 0));
     const finalists = activeFighters.slice(0, 2);
 
     for (const fighter of finalists) {
@@ -299,7 +300,7 @@ export async function setupPhase4(ctx: any, gameId: Id<"games">, players: any[])
     // TODO: We will come back to this functionality (infinite prompts until death).
 
     const game = await ctx.db.get(gameId);
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -321,23 +322,23 @@ export async function setupPhase4(ctx: any, gameId: Id<"games">, players: any[])
     await ctx.db.patch(gameId, { usedPromptIndices: newUsedIndices });
 }
 
-export async function createSuddenDeathPrompt(ctx: any, gameId: Id<"games">, p1: any, p2: any, players: any[]) {
+export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"games">, p1: Doc<"players">, p2: Doc<"players">, players: Doc<"players">[]) {
     console.log(`[GAME] Creating new Sudden Death prompt, cleaning up old data...`);
 
     // Clean up ALL old prompts, submissions, votes, AND suggestions from previous Sudden Death rounds
-    const oldPrompts = await ctx.db.query("prompts").withIndex("by_game", (q: any) => q.eq("gameId", gameId)).collect();
+    const oldPrompts = await ctx.db.query("prompts").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();
 
     // Delete in reverse order: votes -> submissions -> suggestions -> prompts (to avoid orphans)
     for (const oldPrompt of oldPrompts) {
         // Delete votes for this prompt
-        const oldVotes = await ctx.db.query("votes").withIndex("by_prompt", (q: any) => q.eq("promptId", oldPrompt._id)).collect();
+        const oldVotes = await ctx.db.query("votes").withIndex("by_prompt", (q) => q.eq("promptId", oldPrompt._id)).collect();
         for (const vote of oldVotes) {
             await ctx.db.delete(vote._id);
         }
         console.log(`[CLEANUP] Deleted ${oldVotes.length} old votes for prompt ${oldPrompt._id}`);
 
         // Delete submissions for this prompt
-        const oldSubs = await ctx.db.query("submissions").withIndex("by_prompt", (q: any) => q.eq("promptId", oldPrompt._id)).collect();
+        const oldSubs = await ctx.db.query("submissions").withIndex("by_prompt", (q) => q.eq("promptId", oldPrompt._id)).collect();
         for (const sub of oldSubs) {
             await ctx.db.delete(sub._id);
         }
@@ -345,7 +346,7 @@ export async function createSuddenDeathPrompt(ctx: any, gameId: Id<"games">, p1:
 
         // Delete suggestions for this prompt
         const oldSuggestions = await ctx.db.query("suggestions")
-            .filter((q: any) => q.eq(q.field("promptId"), oldPrompt._id))
+            .filter((q) => q.eq(q.field("promptId"), oldPrompt._id))
             .collect();
         for (const suggestion of oldSuggestions) {
             await ctx.db.delete(suggestion._id);
@@ -359,7 +360,7 @@ export async function createSuddenDeathPrompt(ctx: any, gameId: Id<"games">, p1:
     console.log(`[CLEANUP] Cleanup complete! Creating new prompt...`);
 
     const game = await ctx.db.get(gameId);
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
 
     // Ensure we have indices
     if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);

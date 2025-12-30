@@ -49,7 +49,7 @@ export const autoAnswer = mutation({
             // Trigger Bot Votes for the first prompt (Scheduled)
             // We can schedule it here with a delay too!
             const delay = 200 + Math.random() * 300;
-            await ctx.scheduler.runAfter(delay, (api as any).bots.castVotes, {
+            await ctx.scheduler.runAfter(delay, api.bots.castVotes, {
                 gameId: args.gameId,
                 promptId: allPrompts[0]._id
             });
@@ -67,14 +67,14 @@ export const sendSuggestions = mutation({
         const players = await ctx.db.query("players").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();
 
         // Find all bot cornermen (bots with role CORNER_MAN and teamId pointing to a human)
-        const botCornermen = players.filter((p: any) =>
+        const botCornermen = players.filter((p) =>
             p.isBot &&
             p.role === "CORNER_MAN" &&
             p.teamId
         );
 
         for (const bot of botCornermen) {
-            const captain = players.find((p: any) => p._id === bot.teamId);
+            const captain = players.find((p) => p._id === bot.teamId);
             if (!captain || captain.isBot) continue; // Only help human captains
 
             // Find all prompts assigned to this captain
@@ -83,7 +83,7 @@ export const sendSuggestions = mutation({
                 .withIndex("by_game", q => q.eq("gameId", args.gameId))
                 .collect();
 
-            const relevantPrompts = captainPrompts.filter((p: any) =>
+            const relevantPrompts = captainPrompts.filter((p) =>
                 p.assignedTo && p.assignedTo.includes(captain._id)
             );
 
@@ -162,16 +162,16 @@ export const castVotes = mutation({
             return;
         }
 
-        const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q: any) => q.eq("promptId", args.promptId)).collect();
+        const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q) => q.eq("promptId", args.promptId)).collect();
         if (submissions.length === 0) {
             console.warn(`[BOTS] No submissions found for prompt ${args.promptId}, skipping vote`);
             return;
         }
 
-        const players = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", args.gameId)).collect();
-        const bots = players.filter((p: any) => p.isBot);
+        const players = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", args.gameId)).collect();
+        const bots = players.filter((p) => p.isBot);
 
-        const battlerIds = submissions.map((s: any) => s.playerId);
+        const battlerIds = submissions.map((s) => s.playerId);
         const targetSubmission = submissions[0];
 
         for (const bot of bots) {
@@ -182,8 +182,8 @@ export const castVotes = mutation({
             if (bot.teamId && battlerIds.includes(bot.teamId)) continue;
 
             const existing = await ctx.db.query("votes")
-                .withIndex("by_prompt", (q: any) => q.eq("promptId", args.promptId))
-                .filter((q: any) => q.eq(q.field("playerId"), bot._id))
+                .withIndex("by_prompt", (q) => q.eq("promptId", args.promptId))
+                .filter((q) => q.eq(q.field("playerId"), bot._id))
                 .first();
 
             if (!existing) {
@@ -195,9 +195,9 @@ export const castVotes = mutation({
             }
         }
 
-        const currentVotes = await ctx.db.query("votes").withIndex("by_prompt", (q: any) => q.eq("promptId", args.promptId)).collect();
+        const currentVotes = await ctx.db.query("votes").withIndex("by_prompt", (q) => q.eq("promptId", args.promptId)).collect();
 
-        const battlersAndTheirTeams = players.filter((p: any) => battlerIds.includes(p._id) || (p.teamId && battlerIds.includes(p.teamId)));
+        const battlersAndTheirTeams = players.filter((p) => battlerIds.includes(p._id) || (p.teamId && battlerIds.includes(p.teamId)));
         const expectedVotes = Math.max(1, players.length - battlersAndTheirTeams.length);
 
         if (currentVotes.length >= expectedVotes) {

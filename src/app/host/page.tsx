@@ -33,6 +33,8 @@ function HostContent() {
         if (!storedToken) {
             router.push("/");
         } else {
+            // LINT FIX: setState during initial setup effect is intentional
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setHostToken(storedToken);
         }
     }, [router, roomCode]);
@@ -51,12 +53,16 @@ function HostContent() {
 
         // Only trigger on actual round changes (not initial load)
         if (previousRoundRef.current !== null && previousRoundRef.current !== currentRound) {
+            // LINT FIX: setState to trigger round transition animation is intentional
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setTransitionRound(currentRound);
+             
             setShowRoundTransition(true);
         }
 
         previousRoundRef.current = currentRound;
-    }, [game?.currentRound]);
+    // LINT FIX: Added 'game' to dependencies to avoid stale closure
+    }, [game]);
 
     if (!roomCode || !hostToken) return null;
 

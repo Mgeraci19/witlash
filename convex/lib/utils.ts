@@ -1,19 +1,20 @@
 import { Id } from "../_generated/dataModel";
+import { MutationCtx } from "../_generated/server";
 
 // Helper to cast bot votes
-export async function castBotVotes(ctx: any, gameId: Id<"games">, promptId: Id<"prompts">) {
+export async function castBotVotes(ctx: MutationCtx, gameId: Id<"games">, promptId: Id<"prompts">) {
     console.log(`[BOTS] Casting votes for prompt ${promptId}`);
 
     // Get all submissions to pick a winner (First one)
-    const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q: any) => q.eq("promptId", promptId)).collect();
+    const submissions = await ctx.db.query("submissions").withIndex("by_prompt", (q) => q.eq("promptId", promptId)).collect();
     if (submissions.length === 0) return;
 
     // Get all Bots in the game
-    const players = await ctx.db.query("players").withIndex("by_game", (q: any) => q.eq("gameId", gameId)).collect();
-    const bots = players.filter((p: any) => p.isBot);
+    const players = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();
+    const bots = players.filter((p) => p.isBot);
 
     // Check who is battling (cannot vote)
-    const battlerIds = submissions.map((s: any) => s.playerId);
+    const battlerIds = submissions.map((s) => s.playerId);
 
     // Target submission to vote for (First one for now)
     const targetSubmission = submissions[0];
@@ -23,8 +24,8 @@ export async function castBotVotes(ctx: any, gameId: Id<"games">, promptId: Id<"
 
         // Cast Vote checks
         const existing = await ctx.db.query("votes")
-            .withIndex("by_prompt", (q: any) => q.eq("promptId", promptId))
-            .filter((q: any) => q.eq(q.field("playerId"), bot._id))
+            .withIndex("by_prompt", (q) => q.eq("promptId", promptId))
+            .filter((q) => q.eq(q.field("playerId"), bot._id))
             .first();
 
         if (!existing) {
@@ -36,7 +37,7 @@ export async function castBotVotes(ctx: any, gameId: Id<"games">, promptId: Id<"
         }
     }
     // Check if we can advance round status
-    const currentVotes = await ctx.db.query("votes").withIndex("by_prompt", (q: any) => q.eq("promptId", promptId)).collect();
+    const currentVotes = await ctx.db.query("votes").withIndex("by_prompt", (q) => q.eq("promptId", promptId)).collect();
     // Re-query players to be safe, though we have 'players' above
     const totalPlayers = players.length;
     const expectedVotes = Math.max(1, totalPlayers - 2); // Assuming 2 battlers
