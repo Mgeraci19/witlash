@@ -63,9 +63,9 @@ export function AvatarEditor({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Top bar */}
-      <div className="flex justify-between items-center p-4 bg-white border-b">
+    <div className="flex flex-col h-full bg-gray-50 lg:flex-row">
+      {/* Top bar - mobile only */}
+      <div className="flex justify-between items-center p-4 bg-white border-b lg:hidden">
         <Button variant="ghost" onClick={onSkip} disabled={isSaving}>
           Skip
         </Button>
@@ -73,6 +73,61 @@ export function AvatarEditor({
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? "Saving..." : "Save"}
         </Button>
+      </div>
+
+      {/* Desktop/Tablet: Side toolbar on left */}
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:bg-white lg:border-r lg:p-4 lg:space-y-4 lg:overflow-y-auto">
+        <h1 className="text-xl font-bold text-center">Draw Your Avatar</h1>
+
+        {/* Actions */}
+        <div className="flex justify-center gap-2">
+          <Button variant="outline" size="sm" onClick={undo} disabled={!canUndo}>
+            Undo
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClear}>
+            Clear
+          </Button>
+        </div>
+
+        {/* Tools */}
+        <div>
+          <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Tools</div>
+          <ShapeTools currentTool={currentTool} onToolChange={setTool} currentColor={currentColor} />
+        </div>
+
+        {/* Brush sizes */}
+        <div>
+          <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Brush Size</div>
+          <BrushSizeSelector currentSize={brushSize} onSizeChange={setBrushSize} currentColor={currentColor} />
+        </div>
+
+        {/* Color palette */}
+        <div>
+          <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Colors</div>
+          <ColorPalette currentColor={currentColor} onColorChange={setColor} />
+        </div>
+
+        {/* Template selector */}
+        <div>
+          <Button variant="outline" className="w-full" onClick={() => setShowTemplates(!showTemplates)}>
+            {showTemplates ? "Hide Templates" : "Start from Template"}
+          </Button>
+          {showTemplates && (
+            <div className="mt-4">
+              <DefaultAvatarGallery avatars={defaultAvatars} onSelect={handleSelectTemplate} />
+            </div>
+          )}
+        </div>
+
+        {/* Save/Skip - desktop */}
+        <div className="mt-auto pt-4 space-y-2">
+          <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Avatar"}
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={onSkip} disabled={isSaving}>
+            Skip
+          </Button>
+        </div>
       </div>
 
       {/* Canvas area */}
@@ -90,8 +145,8 @@ export function AvatarEditor({
         </div>
       </div>
 
-      {/* Toolbar - bottom anchored */}
-      <div className="bg-white border-t p-4 space-y-4 pb-safe">
+      {/* Toolbar - bottom anchored (mobile only) */}
+      <div className="bg-white border-t p-4 space-y-4 pb-safe lg:hidden">
         {/* Actions row */}
         <div className="flex justify-center gap-4">
           <Button

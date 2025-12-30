@@ -6,6 +6,13 @@ interface HostWritingViewProps {
 }
 
 export function HostWritingView({ game }: HostWritingViewProps) {
+    // Debug: Log player avatar data
+    console.log("[HostWritingView] Players:", game.players.map(p => ({
+        name: p.name,
+        hasAvatar: !!p.avatar,
+        avatarPrefix: p.avatar?.substring(0, 30)
+    })));
+
     // Get all fighters (not corner men)
     const fighters = game.players.filter(p => p.role === "FIGHTER" && !p.isBot);
 
@@ -63,6 +70,7 @@ export function HostWritingView({ game }: HostWritingViewProps) {
                                 maxHp={fighter.maxHp}
                                 isKnockedOut={fighter.knockedOut}
                                 size="small"
+                                avatar={fighter.avatar}
                             />
                             <div className={`mt-2 text-xl font-bold ${hasSubmitted ? "text-green-500" : "text-gray-500 animate-pulse"}`}>
                                 {hasSubmitted ? "READY" : "Writing..."}

@@ -10,8 +10,10 @@ interface VotingViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    submitVote: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; submissionId: Id<"submissions"> }) => Promise<void>;
-    nextBattle: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitVote: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; submissionId: Id<"submissions"> }) => Promise<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    nextBattle: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
 }
 
 export function VotingView({ game, playerId, sessionToken, isVip, submitVote, nextBattle }: VotingViewProps) {

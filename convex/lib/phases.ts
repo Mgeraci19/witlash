@@ -12,7 +12,8 @@ export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players
 
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
-    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    if (!game) throw new Error("Game not found");
+    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
 
     // Helpers
     const getPrompts = (count: number) => {
@@ -93,7 +94,8 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
 
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
-    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    if (!game) throw new Error("Game not found");
+    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
 
     const getPrompts = (count: number) => {
         const selected = [];
@@ -182,7 +184,7 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
                 if (pHP < oHP) {
                     // P Dies.
                     console.log(`[CULL] Executing ${p.name} (${pHP} HP) vs ${opponent.name} (${oHP} HP)`);
-                    await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponentId });
+                    await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id });
                 } else if (oHP < pHP) {
                     // Opponent Dies.
                     console.log(`[CULL] Executing ${opponent.name} (${oHP} HP) vs ${p.name} (${pHP} HP)`);
@@ -191,7 +193,7 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
                     // Tie? Coin flip or Sudden Death?
                     // For MVP, random kill.
                     if (Math.random() > 0.5) {
-                        await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponentId });
+                        await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id });
                     } else {
                         await ctx.db.patch(opponent._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: p._id });
                     }
@@ -223,7 +225,8 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
 
     // Reuse prompt picker
     const game = await ctx.db.get(gameId);
-    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    if (!game) throw new Error("Game not found");
+    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -300,7 +303,8 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
     // TODO: We will come back to this functionality (infinite prompts until death).
 
     const game = await ctx.db.get(gameId);
-    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    if (!game) throw new Error("Game not found");
+    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -360,7 +364,8 @@ export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"game
     console.log(`[CLEANUP] Cleanup complete! Creating new prompt...`);
 
     const game = await ctx.db.get(gameId);
-    const { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices);
+    if (!game) throw new Error("Game not found");
+    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
 
     // Ensure we have indices
     if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);

@@ -9,7 +9,8 @@ interface RoundResultsViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    nextRound: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    nextRound: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
 }
 
 export function RoundResultsView({ game, playerId, sessionToken, isVip, nextRound }: RoundResultsViewProps) {

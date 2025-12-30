@@ -52,6 +52,7 @@ export function HostRoundResultsView({ game }: HostRoundResultsViewProps) {
                                 maxHp={fighter.maxHp}
                                 isKnockedOut={fighter.knockedOut}
                                 size="medium"
+                                avatar={fighter.avatar}
                             />
                         </div>
                     ))}
@@ -72,6 +73,7 @@ export function HostRoundResultsView({ game }: HostRoundResultsViewProps) {
                                         maxHp={fighter.maxHp}
                                         isKnockedOut={true}
                                         size="small"
+                                        avatar={fighter.avatar}
                                     />
                                 </div>
                             ))}

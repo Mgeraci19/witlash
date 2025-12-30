@@ -10,7 +10,8 @@ interface LobbyViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     isVip: boolean;
-    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
 }
 
 export function LobbyView({ game, playerId, sessionToken, isVip, startGame }: LobbyViewProps) {

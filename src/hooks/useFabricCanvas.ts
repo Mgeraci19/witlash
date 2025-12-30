@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Canvas, PencilBrush, Circle, Rect, Triangle, FabricObject } from "fabric";
 
-export type Tool = "brush" | "eraser" | "circle" | "rectangle" | "triangle";
+export type Tool = "brush" | "eraser" | "select" | "circle" | "rectangle" | "triangle";
 
 export interface FabricCanvasState {
   canvas: Canvas | null;
@@ -108,13 +108,25 @@ export function useFabricCanvas(
     if (tool === "brush" || tool === "eraser") {
       canvas.isDrawingMode = true;
       canvas.selection = false;
+      canvas.discardActiveObject();
+      canvas.renderAll();
 
       if (canvas.freeDrawingBrush) {
         canvas.freeDrawingBrush.color = tool === "eraser" ? "#ffffff" : currentColor;
         canvas.freeDrawingBrush.width = brushSize;
       }
+    } else if (tool === "select") {
+      // Select/move tool
+      canvas.isDrawingMode = false;
+      canvas.selection = true;
+      // Make all objects selectable
+      canvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+      canvas.renderAll();
     } else {
-      // Shape tools
+      // Shape tools - add shape then switch to select mode
       canvas.isDrawingMode = false;
       canvas.selection = true;
 
@@ -154,12 +166,8 @@ export function useFabricCanvas(
         canvas.renderAll();
       }
 
-      // Switch back to brush after adding shape
-      setTimeout(() => {
-        setCurrentTool("brush");
-        canvas.isDrawingMode = true;
-        canvas.selection = false;
-      }, 100);
+      // Switch to select mode so user can move/resize the shape
+      setCurrentTool("select");
     }
   }, [canvas, currentColor, brushSize]);
 
@@ -204,7 +212,13 @@ export function useFabricCanvas(
   }, [canvas]);
 
   const loadImage = useCallback(async (dataUrl: string) => {
-    if (!canvas) return;
+    console.log("[AvatarEditor] loadImage called, canvas exists:", !!canvas);
+    console.log("[AvatarEditor] dataUrl prefix:", dataUrl?.substring(0, 50));
+
+    if (!canvas) {
+      console.error("[AvatarEditor] No canvas available for loadImage");
+      return;
+    }
 
     isLoadingRef.current = true;
 
@@ -212,27 +226,37 @@ export function useFabricCanvas(
     const img = new Image();
     img.crossOrigin = "anonymous";
 
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => {
-        // Clear canvas first
-        canvas.clear();
-        canvas.backgroundColor = "#ffffff";
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          console.log("[AvatarEditor] Image loaded successfully, dimensions:", img.width, img.height);
+          // Clear canvas first
+          canvas.clear();
+          canvas.backgroundColor = "#ffffff";
 
-        // Draw the image scaled to fit canvas
-        const ctx = canvas.getContext();
-        ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+          // Draw the image scaled to fit canvas
+          const ctx = canvas.getContext();
+          ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-        canvas.renderAll();
+          canvas.renderAll();
 
-        // Save to history
-        historyRef.current = [JSON.stringify(canvas.toJSON())];
-        setCanUndo(false);
-        isLoadingRef.current = false;
-        resolve();
-      };
-      img.onerror = reject;
-      img.src = dataUrl;
-    });
+          // Save to history
+          historyRef.current = [JSON.stringify(canvas.toJSON())];
+          setCanUndo(false);
+          isLoadingRef.current = false;
+          console.log("[AvatarEditor] Image drawn to canvas");
+          resolve();
+        };
+        img.onerror = (e) => {
+          console.error("[AvatarEditor] Image load error:", e);
+          reject(e);
+        };
+        img.src = dataUrl;
+      });
+    } catch (error) {
+      console.error("[AvatarEditor] loadImage failed:", error);
+      isLoadingRef.current = false;
+    }
   }, [canvas]);
 
   const exportImage = useCallback(() => {

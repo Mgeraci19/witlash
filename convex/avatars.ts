@@ -131,3 +131,63 @@ export const seedDefaultAvatars = mutation({
     }
   },
 });
+
+// Helper to create simple SVG data URLs
+function createSvgAvatar(bgColor: string, shape: string, shapeColor: string): string {
+  let shapeEl = "";
+  switch (shape) {
+    case "circle":
+      shapeEl = `<circle cx="150" cy="150" r="80" fill="${shapeColor}"/>`;
+      break;
+    case "square":
+      shapeEl = `<rect x="70" y="70" width="160" height="160" fill="${shapeColor}"/>`;
+      break;
+    case "triangle":
+      shapeEl = `<polygon points="150,50 250,250 50,250" fill="${shapeColor}"/>`;
+      break;
+    case "star":
+      shapeEl = `<polygon points="150,25 179,111 269,111 197,165 223,251 150,200 77,251 103,165 31,111 121,111" fill="${shapeColor}"/>`;
+      break;
+    case "diamond":
+      shapeEl = `<polygon points="150,30 250,150 150,270 50,150" fill="${shapeColor}"/>`;
+      break;
+    case "cross":
+      shapeEl = `<path d="M120,50 h60 v70 h70 v60 h-70 v70 h-60 v-70 h-70 v-60 h70 z" fill="${shapeColor}"/>`;
+      break;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+    <rect width="300" height="300" fill="${bgColor}"/>
+    ${shapeEl}
+  </svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+// Seed simple test avatars (no args needed)
+export const seedTestAvatars = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Clear existing defaults first
+    const existing = await ctx.db.query("defaultAvatars").collect();
+    for (const avatar of existing) {
+      await ctx.db.delete(avatar._id);
+    }
+
+    const testAvatars = [
+      { name: "Red Circle", imageData: createSvgAvatar("#FFE0E0", "circle", "#FF4444") },
+      { name: "Blue Square", imageData: createSvgAvatar("#E0E8FF", "square", "#4444FF") },
+      { name: "Green Triangle", imageData: createSvgAvatar("#E0FFE8", "triangle", "#44BB44") },
+      { name: "Gold Star", imageData: createSvgAvatar("#FFF8E0", "star", "#FFD700") },
+      { name: "Purple Diamond", imageData: createSvgAvatar("#F0E0FF", "diamond", "#8844CC") },
+      { name: "Orange Cross", imageData: createSvgAvatar("#FFF0E0", "cross", "#FF8800") },
+    ];
+
+    for (const avatar of testAvatars) {
+      await ctx.db.insert("defaultAvatars", {
+        name: avatar.name,
+        imageData: avatar.imageData,
+      });
+    }
+
+    return { seeded: testAvatars.length };
+  },
+});

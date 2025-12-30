@@ -10,6 +10,7 @@
 
 import type * as actions from "../actions.js";
 import type * as admin from "../admin.js";
+import type * as avatars from "../avatars.js";
 import type * as bots from "../bots.js";
 import type * as engine from "../engine.js";
 import type * as game from "../game.js";
@@ -30,6 +31,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
   admin: typeof admin;
+  avatars: typeof avatars;
   bots: typeof bots;
   engine: typeof engine;
   game: typeof game;

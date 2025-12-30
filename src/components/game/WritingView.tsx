@@ -87,10 +87,12 @@ interface CornerManSuggestionCardProps {
     game: GameState;
     playerId: Id<"players"> | null;
     sessionToken: string;
-    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
     captainIsBot?: boolean;
     captainId: Id<"players"> | undefined;
-    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
     showError: (code: string, message: string) => void;
 }
 
@@ -214,10 +216,14 @@ interface WritingViewProps {
     game: GameState;
     playerId: Id<"players"> | null;
     sessionToken: string;
-    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<void>;
-    submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
-    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
-    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
     answers?: Record<string, string>;
 }
 
@@ -326,7 +332,7 @@ export function WritingView({ game, playerId, sessionToken, startGame, submitAns
             </div>
 
             {game.prompts
-                ?.filter((p) => p.assignedTo?.includes(playerId))
+                ?.filter((p) => playerId && p.assignedTo?.includes(playerId))
                 .map((p) => {
                     const isSubmitted = submittedPrompts.has(p._id);
                     const dbSubmission = game.submissions?.find((s) => s.promptId === p._id && s.playerId === playerId);

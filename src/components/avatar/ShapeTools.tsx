@@ -29,6 +29,16 @@ export function ShapeTools({ currentTool, onToolChange, currentColor }: ShapeToo
       ),
     },
     {
+      id: "select",
+      label: "Move/Select",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
+          <path d="M13 5.41V17h2.09L12 20.09 8.91 17H11V5.41L8.91 3.33 8.5 3.75 10.75 6H7.91L11 9.09 14.09 6H11.25L13.5 3.75l-.41-.42L11 5.41V3h2v2.41z" />
+          <path d="M3 3h7v2H5v5H3V3zm18 0h-7v2h5v5h2V3zM3 21h7v-2H5v-5H3v7zm18 0h-7v-2h5v-5h2v7z" />
+        </svg>
+      ),
+    },
+    {
       id: "circle",
       label: "Circle",
       icon: (

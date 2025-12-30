@@ -36,6 +36,7 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
                             hp={winner.hp}
                             maxHp={winner.maxHp}
                             size="large"
+                            avatar={winner.avatar}
                         />
                     </div>
                     <div className="mt-4 text-4xl font-bold text-yellow-400">
@@ -55,6 +56,7 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
                             hp={runnerUp.hp}
                             maxHp={runnerUp.maxHp}
                             size="medium"
+                            avatar={runnerUp.avatar}
                         />
                     </div>
                 )}
@@ -76,6 +78,7 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
                                     maxHp={fighter.maxHp}
                                     isKnockedOut={fighter.knockedOut}
                                     size="small"
+                                    avatar={fighter.avatar}
                                 />
                             </div>
                         ))}
