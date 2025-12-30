@@ -19,24 +19,18 @@ export default function Home() {
   const joinGame = useMutation(api.lobby.join);
   const router = useRouter();
 
-  const handleCreate = async () => {
-    if (!name) {
-      showError("validation", "Please enter your name");
-      return;
-    }
+  const handleHost = async () => {
     if (isLoading) return;
     setIsLoading(true);
     clearError();
     try {
-      const { roomCode } = await createGame({});
-      const { playerId, sessionToken } = await joinGame({ roomCode, playerName: name });
-      sessionStorage.setItem("playerId", playerId);
-      sessionStorage.setItem("sessionToken", sessionToken);
-      sessionStorage.setItem("playerName", name);
-      router.push(`/room?code=${roomCode}`);
-    } catch (e: any) {
+      const { roomCode, hostToken } = await createGame({});
+      sessionStorage.setItem("hostToken", hostToken);
+      router.push(`/host?code=${roomCode}`);
+    } catch (e: unknown) {
       console.error(e);
-      showError("create-failed", e.message || "Failed to create game");
+      const message = e instanceof Error ? e.message : "Failed to create game";
+      showError("host-failed", message);
       setIsLoading(false);
     }
   };
@@ -56,8 +50,9 @@ export default function Home() {
       sessionStorage.setItem("sessionToken", sessionToken);
       sessionStorage.setItem("playerName", name);
       router.push(`/room?code=${code}`);
-    } catch (e: any) {
-      showError("join-failed", e.message || "Failed to join game");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to join game";
+      showError("join-failed", message);
       setIsLoading(false);
     }
   };
@@ -77,68 +72,80 @@ export default function Home() {
           <CardTitle id="app-title" className="text-center text-3xl font-bold">SmackTalk</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="player-name-input" className="text-sm font-medium">Your Name</label>
-            <Input
-              id="player-name-input"
-              data-testid="player-name-input"
-              data-required="true"
-              aria-label="Enter your name to join or create a game"
-              aria-required="true"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+          {/* Host Game - Desktop only */}
+          <div className="hidden md:block">
+            <Button
+              id="host-game-button"
+              data-testid="host-game-button"
+              data-action="host-game"
+              aria-label="Host a new game on this device (for TV display)"
+              onClick={handleHost}
+              className="w-full"
+              variant="default"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating..." : "Host Game"}
+            </Button>
+            <p className="text-xs text-gray-500 mt-1 text-center">
+              Cast this screen to your TV
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Divider - Desktop only */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-300" />
+            <span className="text-sm text-gray-500">or join as player</span>
+            <div className="flex-1 h-px bg-gray-300" />
+          </div>
+
+          {/* Join Game - Always visible */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Button
-                id="create-game-button"
-                data-testid="create-game-button"
-                data-action="create-game"
-                data-has-name={name.length > 0}
-                aria-label="Create a new game room"
-                onClick={handleCreate}
-                className="w-full"
-                variant="default"
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating..." : "Create Game"}
-              </Button>
+              <label htmlFor="player-name-input" className="text-sm font-medium">Your Name</label>
+              <Input
+                id="player-name-input"
+                data-testid="player-name-input"
+                data-required="true"
+                aria-label="Enter your name to join a game"
+                aria-required="true"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
 
-            <div className="space-y-2 flex flex-col">
+            <div className="space-y-2">
+              <label htmlFor="room-code-input" className="text-sm font-medium">Room Code</label>
               <Input
                 id="room-code-input"
                 data-testid="room-code-input"
                 data-format="4-char-uppercase"
                 aria-label="Enter 4-character room code to join existing game"
-                placeholder="Room Code"
+                placeholder="ABCD"
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value)}
                 className="text-center uppercase"
                 maxLength={4}
               />
-              <Button
-                id="join-game-button"
-                data-testid="join-game-button"
-                data-action="join-game"
-                data-has-name={name.length > 0}
-                data-has-code={roomCode.length === 4}
-                aria-label="Join an existing game room"
-                onClick={handleJoin}
-                className="w-full"
-                variant="outline"
-                disabled={isLoading}
-              >
-                {isLoading ? "Joining..." : "Join Game"}
-              </Button>
             </div>
+
+            <Button
+              id="join-game-button"
+              data-testid="join-game-button"
+              data-action="join-game"
+              data-has-name={name.length > 0}
+              data-has-code={roomCode.length === 4}
+              aria-label="Join an existing game room"
+              onClick={handleJoin}
+              className="w-full"
+              variant="outline"
+              disabled={isLoading}
+            >
+              {isLoading ? "Joining..." : "Join Game"}
+            </Button>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

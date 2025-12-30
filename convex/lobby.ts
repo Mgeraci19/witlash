@@ -46,14 +46,16 @@ export const create = mutation({
         await cleanupOldGames(ctx);
 
         const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const hostToken = generateSessionToken();
         // Check collision (omitted for brevity, MVP)
         const gameId = await ctx.db.insert("games", {
             roomCode,
             status: "LOBBY",
             currentRound: 1,
             maxRounds: 4,
+            hostToken,
         });
-        return { gameId, roomCode };
+        return { gameId, roomCode, hostToken };
     },
 });
 

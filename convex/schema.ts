@@ -10,6 +10,7 @@ export default defineSchema({
     currentPromptId: v.optional(v.id("prompts")),
     roundStatus: v.optional(v.string()), // "VOTING" | "REVEAL"
     usedPromptIndices: v.optional(v.array(v.number())), // Track used prompt indices
+    hostToken: v.optional(v.string()), // Auth token for host display
   }).index("by_room_code", ["roomCode"]),
 
   players: defineTable({

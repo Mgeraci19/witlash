@@ -35,6 +35,7 @@ function RoomContent() {
     const sendMessage = useMutation(api.actions.sendMessage);
     const startGame = useMutation(api.lobby.startGame);
     const submitAnswer = useMutation(api.actions.submitAnswer);
+    const submitAnswerForBot = useMutation(api.actions.submitAnswerForBot);
     const submitSuggestion = useMutation(api.actions.submitSuggestion);
     const submitVote = useMutation(api.actions.submitVote);
     const nextBattle = useMutation(api.engine.nextBattle);
@@ -172,7 +173,7 @@ function RoomContent() {
                     )}
 
                     {game.status === "PROMPTS" && (
-                        <WritingView game={game} playerId={playerId} sessionToken={sessionToken} startGame={startGame} submitAnswer={submitAnswer} submitSuggestion={submitSuggestion} />
+                        <WritingView game={game} playerId={playerId} sessionToken={sessionToken} startGame={startGame} submitAnswer={submitAnswer} submitAnswerForBot={submitAnswerForBot} submitSuggestion={submitSuggestion} />
                     )}
 
                     {game.status === "VOTING" && (

@@ -192,3 +192,76 @@ export const submitSuggestion = mutation({
         });
     }
 });
+
+// Submit answer on behalf of a bot captain (corner man only)
+export const submitAnswerForBot = mutation({
+    args: {
+        gameId: v.id("games"),
+        playerId: v.id("players"),  // The corner man's ID (for auth)
+        sessionToken: v.string(),
+        promptId: v.id("prompts"),
+        text: v.string()
+    },
+    handler: async (ctx, args) => {
+        // Validate corner man's session
+        const cornerMan = await validatePlayer(ctx, args.playerId, args.sessionToken);
+
+        if (cornerMan.role !== "CORNER_MAN") throw new Error("Only Corner Men can submit for bots");
+        if (!cornerMan.teamId) throw new Error("No team assigned");
+
+        // Get the captain (bot)
+        const captain = await ctx.db.get(cornerMan.teamId);
+        if (!captain) throw new Error("Captain not found");
+        if (!captain.isBot) throw new Error("Can only submit for bot captains");
+
+        // Validate input
+        const validatedText = validateTextInput(args.text, MAX_ANSWER_LENGTH, "Answer");
+
+        // Check if bot already submitted for this prompt
+        const existingSubmission = await ctx.db.query("submissions")
+            .withIndex("by_prompt", q => q.eq("promptId", args.promptId))
+            .filter(q => q.eq(q.field("playerId"), cornerMan.teamId))
+            .first();
+
+        if (existingSubmission) {
+            throw new Error("Bot has already submitted for this prompt");
+        }
+
+        console.log(`[GAME] Corner man ${cornerMan.name} submitted answer for bot ${captain.name} on prompt ${args.promptId}`);
+
+        // Submit as the BOT, not the corner man
+        await ctx.db.insert("submissions", {
+            promptId: args.promptId,
+            playerId: cornerMan.teamId,  // Use the BOT's ID
+            text: validatedText,
+        });
+
+        // Check if all submissions are in (same logic as submitAnswer)
+        const allPrompts = await ctx.db.query("prompts").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();
+        const totalExpected = allPrompts.length * 2;
+
+        let totalReceived = 0;
+        for (const prompt of allPrompts) {
+            const subs = await ctx.db.query("submissions").withIndex("by_prompt", q => q.eq("promptId", prompt._id)).collect();
+            totalReceived += subs.length;
+        }
+
+        if (totalReceived >= totalExpected) {
+            console.log(`[GAME] All answers received! Moving to VOTING.`);
+
+            const game = await ctx.db.get(args.gameId);
+            const startPromptId = game?.currentRound === 4
+                ? allPrompts[allPrompts.length - 1]._id
+                : allPrompts[0]._id;
+
+            await ctx.db.patch(args.gameId, {
+                status: "VOTING",
+                currentPromptId: startPromptId,
+                roundStatus: "VOTING"
+            });
+
+            const delay = 300 + Math.random() * 400;
+            await ctx.scheduler.runAfter(delay, api.bots.castVotes, { gameId: args.gameId, promptId: startPromptId });
+        }
+    }
+});

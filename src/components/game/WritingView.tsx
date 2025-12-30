@@ -70,7 +70,7 @@ function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showEr
 }
 
 // Helper Component for Corner Man Input
-function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitSuggestion, captainIsBot, captainId, submitAnswer, showError }: any) {
+function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitSuggestion, captainIsBot, captainId, submitAnswerForBot, showError }: any) {
     const [suggestionText, setSuggestionText] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -153,9 +153,9 @@ function CornerManSuggestionCard({ prompt, game, playerId, sessionToken, submitS
                             onClick={async () => {
                                 if (!suggestionText) return;
                                 try {
-                                    await submitAnswer({
+                                    await submitAnswerForBot({
                                         gameId: game._id,
-                                        playerId: playerId!, // Use own playerId for auth
+                                        playerId: playerId!, // Corner man's ID for auth
                                         sessionToken,
                                         promptId: prompt._id,
                                         text: suggestionText
@@ -193,11 +193,12 @@ interface WritingViewProps {
     sessionToken: string;
     startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
     submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
+    submitAnswerForBot: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
     submitSuggestion: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string }) => Promise<any>;
     answers?: Record<string, string>;
 }
 
-export function WritingView({ game, playerId, sessionToken, startGame, submitAnswer, submitSuggestion }: WritingViewProps) {
+export function WritingView({ game, playerId, sessionToken, startGame, submitAnswer, submitAnswerForBot, submitSuggestion }: WritingViewProps) {
     const [submittedPrompts, setSubmittedPrompts] = useState<Set<string>>(new Set());
     const { error, showError, clearError } = useErrorState();
     const myPlayer = game.players.find((p) => p._id === playerId);
@@ -255,7 +256,7 @@ export function WritingView({ game, playerId, sessionToken, startGame, submitAns
                             submitSuggestion={submitSuggestion}
                             captainId={myTeamId}
                             captainIsBot={captainPlayer?.isBot}
-                            submitAnswer={submitAnswer}
+                            submitAnswerForBot={submitAnswerForBot}
                             showError={showError}
                         />
 

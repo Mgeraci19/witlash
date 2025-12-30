@@ -1,0 +1,29 @@
+# 1. ALWAYS IGNORE (Zero logic value, high token cost)
+node_modules/
+dist/
+build/
+.next/
+.git/
+package-lock.json
+yarn.lock
+*.log
+*.pyc
+
+# 2. MEDIA & ASSETS (Claude can't "read" these as code)
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+*.mp4
+public/assets/
+
+# 3. SELECTIVE ACCURACY (The "Magic" Part)
+# Ignore large data files that define content, not logic
+tests/fixtures/**/*.json
+docs/legacy/
+
+# 4. PROTECT SECRETS (Safety first)
+.env*
+*.pem
+*.key
