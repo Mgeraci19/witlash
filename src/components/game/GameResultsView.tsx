@@ -29,17 +29,20 @@ export function GameResultsView({ game, isVip }: GameResultsViewProps) {
                 <h3 className="text-xl font-bold text-green-800 mb-2">👀 Look at the Main Screen!</h3>
                 <p className="text-gray-600">The winner is crowned on the host display!</p>
             </div>
-            {isVip && (
-                <Button
-                    id="back-to-home-button"
-                    data-testid="back-to-home-button"
-                    data-action="navigate-home"
-                    className="mt-8"
-                    onClick={() => router.push("/")}
-                >
-                    Back to Home
-                </Button>
-            )}
+            <Button
+                id="back-to-home-button"
+                data-testid="back-to-home-button"
+                data-action="navigate-home"
+                className="mt-8"
+                onClick={() => {
+                    // Clear player session
+                    sessionStorage.removeItem("playerId");
+                    sessionStorage.removeItem("sessionToken");
+                    router.push("/");
+                }}
+            >
+                Back to Home
+            </Button>
         </div>
     );
 }

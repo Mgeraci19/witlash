@@ -1,11 +1,14 @@
 import { GameState } from "@/lib/types";
 import { FighterPlaceholder } from "./FighterPlaceholder";
+import { useRouter } from "next/navigation";
 
 interface HostGameResultsViewProps {
     game: GameState;
 }
 
 export function HostGameResultsView({ game }: HostGameResultsViewProps) {
+    const router = useRouter();
+
     // Sort fighters by HP to get final standings
     const fighters = game.players
         .filter(p => p.role === "FIGHTER")
@@ -90,6 +93,21 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
             <div className="mt-12 text-2xl text-gray-400">
                 Thanks for playing SmackTalk!
             </div>
+
+            {/* New Game Button */}
+            <button
+                id="new-game-button"
+                data-testid="new-game-button"
+                data-action="new-game"
+                className="mt-8 px-8 py-4 bg-green-600 hover:bg-green-700 text-white text-2xl font-bold rounded-lg transition-colors shadow-lg"
+                onClick={() => {
+                    // Clear host session
+                    sessionStorage.removeItem("hostToken");
+                    router.push("/");
+                }}
+            >
+                New Game
+            </button>
         </div>
     );
 }
