@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 interface FighterPlaceholderProps {
     name: string;
     hp?: number;
@@ -36,9 +37,8 @@ export function FighterPlaceholder({
         >
             {/* Avatar */}
             <div
-                className={`${sizeClasses[size]} bg-gray-700 rounded-lg border-4 ${
-                    isKnockedOut ? "border-red-500 opacity-50" : "border-gray-500"
-                } flex items-center justify-center relative overflow-hidden`}
+                className={`${sizeClasses[size]} bg-gray-700 rounded-lg border-4 ${isKnockedOut ? "border-red-500 opacity-50" : "border-gray-500"
+                    } flex items-center justify-center relative overflow-hidden`}
                 style={{ transform: side === "right" ? "scaleX(-1)" : undefined }}
             >
                 {avatar ? (
@@ -57,9 +57,8 @@ export function FighterPlaceholder({
 
             {/* Name plate */}
             <div
-                className={`mt-2 px-4 py-1 bg-gray-800 rounded text-center ${
-                    side === "right" ? "scale-x-[-1]" : ""
-                }`}
+                className={`mt-2 px-4 py-1 bg-gray-800 rounded text-center ${side === "right" ? "scale-x-[-1]" : ""
+                    }`}
             >
                 <span className={`font-bold text-xl ${isKnockedOut ? "line-through text-gray-500" : "text-white"}`}>
                     {name}

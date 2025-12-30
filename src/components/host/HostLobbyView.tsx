@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { GameState } from "@/lib/types";
 
 interface HostLobbyViewProps {

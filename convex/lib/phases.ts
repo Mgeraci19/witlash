@@ -13,7 +13,9 @@ export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
+    const availResult = getAvailableIndices(game.usedPromptIndices || []);
+    let availableIndices = availResult.availableIndices;
+    const newUsedIndices = availResult.usedIndices;
 
     // Helpers
     const getPrompts = (count: number) => {
@@ -95,7 +97,9 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
     // Get Available Prompts Logic
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
+    const availResult = getAvailableIndices(game.usedPromptIndices || []);
+    let availableIndices = availResult.availableIndices;
+    const newUsedIndices = availResult.usedIndices;
 
     const getPrompts = (count: number) => {
         const selected = [];
@@ -226,7 +230,9 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
     // Reuse prompt picker
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
+    const availResult = getAvailableIndices(game.usedPromptIndices || []);
+    let availableIndices = availResult.availableIndices;
+    const newUsedIndices = availResult.usedIndices;
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -304,7 +310,9 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
+    const availResult = getAvailableIndices(game.usedPromptIndices || []);
+    let availableIndices = availResult.availableIndices;
+    const newUsedIndices = availResult.usedIndices;
 
     const getPrompt = () => {
         if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);
@@ -365,7 +373,9 @@ export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"game
 
     const game = await ctx.db.get(gameId);
     if (!game) throw new Error("Game not found");
-    let { availableIndices, usedIndices: newUsedIndices } = getAvailableIndices(game.usedPromptIndices || []);
+    const availResult = getAvailableIndices(game.usedPromptIndices || []);
+    let availableIndices = availResult.availableIndices;
+    const newUsedIndices = availResult.usedIndices;
 
     // Ensure we have indices
     if (availableIndices.length === 0) availableIndices = PROMPTS.map((_, k) => k);

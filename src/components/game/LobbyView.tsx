@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { Button } from "@/components/ui/button";
 import { Id } from "../../../convex/_generated/dataModel";
 import { GameState } from "@/lib/types";

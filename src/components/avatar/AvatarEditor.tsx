@@ -16,7 +16,7 @@ interface AvatarEditorProps {
 }
 
 export function AvatarEditor({
-  initialAvatar,
+
   onSave,
   onSkip,
   defaultAvatars,

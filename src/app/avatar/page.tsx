@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const api = require("../../../convex/_generated/api").api;
+import { api } from "../../../convex/_generated/api";
 import { AvatarEditor } from "@/components/avatar/AvatarEditor";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -25,7 +24,7 @@ function AvatarContent() {
   const game = useQuery(
     api.game.get,
     roomCode ? { roomCode } : "skip"
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as any;
 
   const saveAvatar = useMutation(api.avatars?.saveAvatar);
@@ -44,6 +43,7 @@ function AvatarContent() {
     if (!storedId || !storedToken) {
       router.push("/");
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlayerId(storedId as Id<"players">);
       setSessionToken(storedToken);
       setIsReady(true);

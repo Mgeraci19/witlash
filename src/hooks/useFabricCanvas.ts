@@ -83,6 +83,7 @@ export function useFabricCanvas(
     return () => {
       fabricCanvas.dispose();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef]);
 
   // Update brush when color or size changes
