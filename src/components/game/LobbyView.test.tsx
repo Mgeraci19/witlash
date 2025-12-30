@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { LobbyView } from "./LobbyView";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -35,6 +35,14 @@ function createMockGame(playerCount: number = 2) {
     suggestions: [],
   };
 }
+
+const mockPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
 
 describe("LobbyView", () => {
   const mockStartGame = vi.fn().mockResolvedValue(undefined);
@@ -160,5 +168,45 @@ describe("LobbyView", () => {
 
     const list = screen.getByTestId("lobby-player-list");
     expect(list).toHaveAttribute("data-count", "4");
+  });
+
+  test("clicking Start Game calls startGame prop", () => {
+    const game = createMockGame(2);
+    render(
+      <LobbyView
+        game={game}
+        playerId={"player-0" as Id<"players">}
+        sessionToken="token-0"
+        isVip={true}
+        startGame={mockStartGame}
+      />
+    );
+
+    const button = screen.getByRole("button", { name: /start/i });
+    fireEvent.click(button);
+    expect(mockStartGame).toHaveBeenCalledWith({
+      gameId: game._id,
+      playerId: "player-0",
+      sessionToken: "token-0",
+    });
+  });
+
+  test("clicking Edit Avatar redirects to avatar page", () => {
+    const game = createMockGame(1);
+    game.roomCode = "TEST_CODE"; // Ensure code is set
+
+    render(
+      <LobbyView
+        game={game}
+        playerId={"player-0" as Id<"players">}
+        sessionToken="token-0"
+        isVip={true}
+        startGame={mockStartGame}
+      />
+    );
+
+    const button = screen.getByText(/Edit Avatar/i);
+    fireEvent.click(button);
+    expect(mockPush).toHaveBeenCalledWith("/avatar?code=TEST_CODE&edit=true");
   });
 });
