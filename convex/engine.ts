@@ -156,6 +156,15 @@ export const nextRound = mutation({
 
         await ctx.db.patch(args.gameId, { currentRound: targetRound });
 
+        // Reset all winStreaks at round boundaries
+        const allPlayers = await ctx.db.query("players").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();
+        for (const player of allPlayers) {
+            if (player.winStreak && player.winStreak > 0) {
+                console.log(`[ROUND RESET] Resetting ${player.name}'s winStreak from ${player.winStreak} to 0`);
+                await ctx.db.patch(player._id, { winStreak: 0 });
+            }
+        }
+
         // Clean old data 
         const oldPrompts = await ctx.db.query("prompts").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();
         for (const p of oldPrompts) await ctx.db.delete(p._id);

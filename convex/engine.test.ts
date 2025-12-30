@@ -163,11 +163,11 @@ describe("engine.nextBattle - damage calculation", () => {
     // Player 1 had fewer votes (loser), takes damage
     // Damage = (3/4) * 35 = 26.25 → floor(100 - 26.25) = 73
     expect(player1!.hp!).toBe(73);
-    // Player 2 had more votes (winner), takes NO damage, streak reset
+    // Player 2 had more votes (winner), takes NO damage, gets winStreak
     expect(player2!.hp!).toBe(100);
-    expect(player2!.lossStreak).toBe(0);
-    // Player 1 has loss streak of 1
-    expect(player1!.lossStreak).toBe(1);
+    expect(player2!.winStreak).toBe(1);
+    // Player 1 has winStreak reset to 0
+    expect(player1!.winStreak).toBe(0);
   });
 
   test("even votes result in equal damage", async () => {
@@ -188,9 +188,9 @@ describe("engine.nextBattle - damage calculation", () => {
 
     // Equal damage for equal votes
     expect(player1!.hp).toBe(player2!.hp);
-    // Both have loss streak of 1 (tie counts as loss for both)
-    expect(player1!.lossStreak).toBe(1);
-    expect(player2!.lossStreak).toBe(1);
+    // Both have winStreak reset to 0 (normal tie resets combos)
+    expect(player1!.winStreak).toBe(0);
+    expect(player2!.winStreak).toBe(0);
   });
 
   test("damage cap is 35 HP per battle", async () => {
@@ -282,6 +282,65 @@ describe("engine.nextBattle - damage calculation", () => {
     // No damage when no votes
     expect(player1!.hp).toBe(100);
     expect(player2!.hp).toBe(100);
+  });
+
+  test("2-win combo applies bonus damage", async () => {
+    const t = convexTest(schema);
+    const { gameId, player1Id, player2Id } = await setupVotingScenario(t, {
+      player1Votes: 3,
+      player2Votes: 1,
+    });
+
+    // Give player1 a winStreak of 1 (simulating a previous win)
+    await t.run(async (ctx) => {
+      await ctx.db.patch(player1Id, { winStreak: 1 });
+    });
+
+    await t.mutation(api.engine.nextBattle, {
+      gameId,
+      playerId: player1Id,
+      sessionToken: "token1",
+    });
+
+    const player1 = await t.run(async (ctx) => ctx.db.get(player1Id));
+    const player2 = await t.run(async (ctx) => ctx.db.get(player2Id));
+
+    // Player2 takes base damage + COMBO_BONUS_DAMAGE (15)
+    // Base damage: (3/4) * 35 = 26.25, + 15 bonus = 41.25
+    // floor(100 - 41.25) = floor(58.75) = 58
+    expect(player2!.hp).toBe(58);
+    // Player1 winStreak increments to 2
+    expect(player1!.winStreak).toBe(2);
+    // Player2 winStreak resets to 0
+    expect(player2!.winStreak).toBe(0);
+  });
+
+  test("3-win combo triggers instant KO", async () => {
+    const t = convexTest(schema);
+    const { gameId, player1Id, player2Id } = await setupVotingScenario(t, {
+      player1Votes: 3,
+      player2Votes: 1,
+    });
+
+    // Give player1 a winStreak of 2 (simulating 2 previous wins)
+    await t.run(async (ctx) => {
+      await ctx.db.patch(player1Id, { winStreak: 2 });
+    });
+
+    await t.mutation(api.engine.nextBattle, {
+      gameId,
+      playerId: player1Id,
+      sessionToken: "token1",
+    });
+
+    const player1 = await t.run(async (ctx) => ctx.db.get(player1Id));
+    const player2 = await t.run(async (ctx) => ctx.db.get(player2Id));
+
+    // Player2 takes instant KO damage (HP = 0)
+    expect(player2!.hp).toBe(0);
+    expect(player2!.knockedOut).toBe(true);
+    // Player1 winStreak increments to 3
+    expect(player1!.winStreak).toBe(3);
   });
 });
 
@@ -412,5 +471,69 @@ describe("engine.nextRound", () => {
         sessionToken: "regular-token",
       })
     ).rejects.toThrow("Only VIP can perform this action");
+  });
+
+  test("nextRound resets all winStreaks", async () => {
+    const t = convexTest(schema);
+
+    const gameId = await t.run(async (ctx) => {
+      return await ctx.db.insert("games", {
+        roomCode: "TEST",
+        status: "ROUND_RESULTS",
+        currentRound: 1,
+        maxRounds: 4,
+      });
+    });
+
+    // Create VIP player with winStreak
+    const vipId = await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: "VIP",
+        score: 0,
+        isVip: true,
+        sessionToken: "vip-token",
+        hp: 100,
+        maxHp: 100,
+        knockedOut: false,
+        role: "FIGHTER",
+        isBot: false,
+        winStreak: 2, // Has a combo streak
+      });
+    });
+
+    // Add more players with various winStreaks
+    for (let i = 0; i < 5; i++) {
+      await t.run(async (ctx) => {
+        await ctx.db.insert("players", {
+          gameId,
+          name: `Bot${i}`,
+          score: 0,
+          isVip: false,
+          sessionToken: `bot${i}`,
+          hp: 100,
+          maxHp: 100,
+          knockedOut: false,
+          role: "FIGHTER",
+          isBot: true,
+          winStreak: i % 3, // Mix of 0, 1, 2
+        });
+      });
+    }
+
+    await t.mutation(api.engine.nextRound, {
+      gameId,
+      playerId: vipId,
+      sessionToken: "vip-token",
+    });
+
+    // Check all players have winStreak reset to 0
+    const allPlayers = await t.run(async (ctx) =>
+      ctx.db.query("players").withIndex("by_game", q => q.eq("gameId", gameId)).collect()
+    );
+
+    for (const player of allPlayers) {
+      expect(player.winStreak).toBe(0);
+    }
   });
 });

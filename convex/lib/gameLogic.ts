@@ -22,6 +22,7 @@ export async function resolveBattle(
 
     const totalVotes = votes.length;
     const DAMAGE_CAP = 35;
+    const COMBO_BONUS_DAMAGE = 15; // Bonus damage for 2-win combo
 
     // Round multipliers for damage scaling
     const getRoundMultiplier = (round: number): number => {
@@ -63,63 +64,90 @@ export async function resolveBattle(
 
     if (isTie) {
         // In a tie, both take equal damage (50% of DAMAGE_CAP)
-        let damage = 0.5 * DAMAGE_CAP * getRoundMultiplier(currentRound);
+        console.log("[TIE BATTLE] Both players received equal votes");
+        const tieDamage = 0.5 * DAMAGE_CAP * getRoundMultiplier(currentRound);
 
         // Calculate if both would be KO'd
         const results = subsWithVotes.map(({ sub, player }) => {
             const currentHp = sanitizeHP(player?.hp);
-            const newHp = Math.max(0, Math.floor(currentHp - damage));
+            const newHp = Math.max(0, Math.floor(currentHp - tieDamage));
             return { sub, player, currentHp, newHp, wouldKO: newHp === 0 };
         });
 
+        const [r1, r2] = results;
         const bothKO = results.every(r => r.wouldKO);
+        const singleKO = results.some(r => r.wouldKO) && !bothKO;
+
+        // Determine faster submission for tiebreaker
+        const r1WasFaster = r1.sub._creationTime < r2.sub._creationTime;
 
         if (bothKO) {
-            // DOUBLE KO TIE - Shorter answer survives!
-            const [r1, r2] = results;
-            const len1 = r1.sub.text.length;
-            const len2 = r2.sub.text.length;
+            // DOUBLE KO TIE - Faster submission gets winStreak increment
+            const winner = r1WasFaster ? r1 : r2;
+            const loser = r1WasFaster ? r2 : r1;
+            console.log(`[GAME] DOUBLE KO TIE! Faster submission wins: ${winner.player?.name} submitted first`);
 
-            let winner, loser;
-
-            if (len1 !== len2) {
-                // Shorter answer wins
-                winner = len1 < len2 ? r1 : r2;
-                loser = len1 < len2 ? r2 : r1;
-                console.log(`[GAME] DOUBLE KO TIE! Shorter answer wins: ${winner.player?.name} (${len1 < len2 ? len1 : len2} chars) beats ${loser.player?.name} (${len1 < len2 ? len2 : len1} chars)`);
-            } else {
-                // Same length - first submission wins (submitted faster)
-                winner = r1.sub._creationTime < r2.sub._creationTime ? r1 : r2;
-                loser = r1.sub._creationTime < r2.sub._creationTime ? r2 : r1;
-                console.log(`[GAME] DOUBLE KO TIE! Same length (${len1} chars) - faster submission wins: ${winner.player?.name} submitted first`);
-            }
-
-            // Winner takes damage but survives with 1 HP (still counts as a loss in tie)
+            // Winner takes damage but survives with 1 HP and gets winStreak increment
             if (winner.player) {
-                const currentStreak = winner.player.lossStreak || 0;
-                await ctx.db.patch(winner.player._id, { hp: 1, knockedOut: false, lossStreak: currentStreak + 1 });
+                const currentStreak = winner.player.winStreak || 0;
+                const newStreak = currentStreak + 1;
+                await ctx.db.patch(winner.player._id, { hp: 1, knockedOut: false, winStreak: newStreak });
+                console.log(`[GAME] ${winner.player.name}: survives with 1 HP, winStreak: ${currentStreak} → ${newStreak}`);
+                if (newStreak === 2) {
+                    console.log(`[COMBO WARNING] ${winner.player.name} is on a 2-win streak! Next win = INSTANT KO!`);
+                }
             }
 
-            // Loser gets KO'd
+            // Loser gets KO'd and winStreak resets
             if (loser.player) {
-                const currentStreak = loser.player.lossStreak || 0;
                 const opponentSub = submissions.find(s => s.playerId !== loser.player!._id);
                 if (opponentSub && (currentRound === 1 || currentRound === 2)) {
                     const winnerId = opponentSub.playerId;
                     console.log(`[GAME] Round ${currentRound}: ${loser.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
-                    await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, lossStreak: currentStreak + 1 });
+                    await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0 });
                 } else {
                     console.log(`[GAME] Player ${loser.player.name} KO'd in Round ${currentRound}!`);
-                    await ctx.db.patch(loser.player._id, { hp: 0, knockedOut: true, lossStreak: currentStreak + 1 });
+                    await ctx.db.patch(loser.player._id, { hp: 0, knockedOut: true, winStreak: 0 });
+                }
+                console.log(`[GAME] ${loser.player.name}: KO'd, winStreak reset to 0`);
+            }
+        } else if (singleKO) {
+            // Single KO: survivor gets winStreak increment, KO'd resets
+            const survivor = r1.wouldKO ? r2 : r1;
+            const knocked = r1.wouldKO ? r1 : r2;
+            console.log(`[GAME] SINGLE KO TIE! ${survivor.player?.name} survives, ${knocked.player?.name} KO'd`);
+
+            // Survivor gets winStreak increment
+            if (survivor.player) {
+                const currentStreak = survivor.player.winStreak || 0;
+                const newStreak = currentStreak + 1;
+                await ctx.db.patch(survivor.player._id, { hp: survivor.newHp, knockedOut: false, winStreak: newStreak });
+                console.log(`[GAME] ${survivor.player.name}: ${survivor.currentHp} HP - ${Math.floor(tieDamage)} damage = ${survivor.newHp} HP, winStreak: ${currentStreak} → ${newStreak}`);
+                if (newStreak === 2) {
+                    console.log(`[COMBO WARNING] ${survivor.player.name} is on a 2-win streak! Next win = INSTANT KO!`);
                 }
             }
+
+            // Knocked out player resets winStreak
+            if (knocked.player) {
+                const opponentSub = submissions.find(s => s.playerId !== knocked.player!._id);
+                if (opponentSub && (currentRound === 1 || currentRound === 2)) {
+                    const winnerId = opponentSub.playerId;
+                    console.log(`[GAME] Round ${currentRound}: ${knocked.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
+                    await ctx.db.patch(knocked.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0 });
+                } else {
+                    console.log(`[GAME] Player ${knocked.player.name} KO'd in Round ${currentRound}!`);
+                    await ctx.db.patch(knocked.player._id, { hp: 0, knockedOut: true, winStreak: 0 });
+                }
+                console.log(`[GAME] ${knocked.player.name}: KO'd, winStreak reset to 0`);
+            }
         } else {
-            // Normal tie - apply equal damage to both (both count as losses)
+            // Normal tie (both survive) - both winStreaks reset to 0
+            console.log("[GAME] NORMAL TIE - Both survive, both combos reset");
             for (const r of results) {
                 if (r.player) {
-                    const currentStreak = r.player.lossStreak || 0;
-                    console.log(`[GAME] TIE: ${r.player.name}: ${r.currentHp} HP - ${Math.floor(damage)} damage = ${r.newHp} HP (streak: ${currentStreak + 1})`);
-                    await ctx.db.patch(r.player._id, { hp: r.newHp, knockedOut: r.wouldKO, lossStreak: currentStreak + 1 });
+                    console.log(`[GAME] TIE: ${r.player.name}: ${r.currentHp} HP - ${Math.floor(tieDamage)} damage = ${r.newHp} HP, winStreak reset to 0`);
+                    await ctx.db.patch(r.player._id, { hp: r.newHp, knockedOut: false, winStreak: 0 });
                 }
             }
         }
@@ -131,29 +159,32 @@ export async function resolveBattle(
         const loser = subsWithVotes[0];
         const winner = subsWithVotes[1];
 
-        // Calculate damage for loser based on vote proportions
+        // Get winner's current win streak for combo bonuses
+        const winnerStreak = winner.player?.winStreak || 0;
+        const newWinnerStreak = winnerStreak + 1;
+
+        // Calculate base damage for loser based on vote proportions
         const votesAgainst = totalVotes - loser.votesFor;
         let damage = (votesAgainst / totalVotes) * DAMAGE_CAP * getRoundMultiplier(currentRound);
+
+        // Apply combo bonuses BEFORE taking damage
+        if (winnerStreak === 2) {
+            // 3rd win in a row = instant KO (works in ALL rounds)
+            damage = 999; // Ensure KO regardless of HP
+            console.log(`[COMBO x3 INSTANT KO!] ${winner.player?.name} gets instant KO on ${loser.player?.name}`);
+        } else if (winnerStreak === 1) {
+            // 2nd win in a row = bonus damage
+            damage += COMBO_BONUS_DAMAGE;
+            console.log(`[COMBO x2 BONUS!] ${winner.player?.name} deals +${COMBO_BONUS_DAMAGE} bonus damage`);
+        }
 
         // Apply damage to loser
         if (loser.player) {
             const currentHp = sanitizeHP(loser.player.hp);
-            const currentStreak = loser.player.lossStreak || 0;
-            const newStreak = currentStreak + 1;
+            const newHp = Math.max(0, Math.floor(currentHp - damage));
+            const knockedOut = newHp === 0;
 
-            // COMBO KO: 3 straight losses in Round 1 = auto KO
-            let knockedOut = false;
-            let newHp = Math.max(0, Math.floor(currentHp - damage));
-
-            if (currentRound === 1 && newStreak >= 3) {
-                knockedOut = true;
-                newHp = 0;
-                console.log(`[COMBO KO!!!] ${loser.player.name} lost 3 straight battles in Round 1! Auto-KO!`);
-            } else {
-                knockedOut = newHp === 0;
-            }
-
-            console.log(`[GAME] ${loser.player.name}: ${currentHp} HP - ${Math.floor(damage)} damage = ${newHp} HP (${loser.votesFor}/${totalVotes} votes, streak: ${newStreak})`);
+            console.log(`[GAME] ${loser.player.name}: ${currentHp} HP - ${Math.floor(damage)} damage = ${newHp} HP (${loser.votesFor}/${totalVotes} votes, winStreak reset to 0)`);
 
             if (knockedOut) {
                 const opponentSub = submissions.find(s => s.playerId !== loser.player!._id);
@@ -169,28 +200,31 @@ export async function resolveBattle(
 
                     if (existingCornerMen.length >= 1) {
                         console.warn(`[GAME] WARNING: ${loser.player.name} lost to ${winnerId} who already has ${existingCornerMen.length} corner men! This violates bye logic. Assigning anyway as second corner man.`);
-                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, lossStreak: newStreak });
+                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0 });
                         console.log(`[CORNER MAN ASSIGNED] ${loser.player.name} (ID: ${loser.player._id}) → Supporting ${winnerId}`);
                     } else {
                         console.log(`[GAME] Round ${currentRound}: ${loser.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
-                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, lossStreak: newStreak });
+                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0 });
                         console.log(`[CORNER MAN ASSIGNED] ${loser.player.name} (ID: ${loser.player._id}) → Supporting ${winnerId}`);
                     }
                 } else {
                     console.log(`[GAME] Player ${loser.player.name} KO'd in Round ${currentRound}!`);
-                    await ctx.db.patch(loser.player._id, { hp: newHp, knockedOut, lossStreak: newStreak });
+                    await ctx.db.patch(loser.player._id, { hp: newHp, knockedOut, winStreak: 0 });
                 }
             } else {
-                // Not KO'd - update HP and loss streak
-                await ctx.db.patch(loser.player._id, { hp: newHp, knockedOut, lossStreak: newStreak });
+                // Not KO'd - update HP and reset winStreak
+                await ctx.db.patch(loser.player._id, { hp: newHp, knockedOut, winStreak: 0 });
             }
         }
 
-        // Winner takes no damage - reset loss streak
+        // Winner takes no damage - increment winStreak
         if (winner.player) {
             const currentHp = sanitizeHP(winner.player.hp);
-            console.log(`[GAME] ${winner.player.name}: ${currentHp} HP (WINNER - no damage, ${winner.votesFor}/${totalVotes} votes, streak reset)`);
-            await ctx.db.patch(winner.player._id, { hp: currentHp, knockedOut: false, lossStreak: 0 });
+            console.log(`[GAME] ${winner.player.name}: ${currentHp} HP (WINNER - no damage, ${winner.votesFor}/${totalVotes} votes, winStreak: ${winnerStreak} → ${newWinnerStreak})`);
+            await ctx.db.patch(winner.player._id, { hp: currentHp, knockedOut: false, winStreak: newWinnerStreak });
+            if (newWinnerStreak === 2) {
+                console.log(`[COMBO WARNING] ${winner.player.name} is on a 2-win streak! Next win = INSTANT KO!`);
+            }
         }
     }
 }

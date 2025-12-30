@@ -43,9 +43,9 @@ export function playWinnerAttack({
   const loserNewHp = (loser.hp || 100) - damage;
   const isKO = loserNewHp <= 0;
 
-  // Check for combo KO (3+ loss streak after this loss)
-  const loserStreak = (loser.lossStreak || 0) + 1; // This will be their streak AFTER losing
-  const isComboKO = isKO && loserStreak >= 3;
+  // Check for combo KO (3-win streak triggers instant KO)
+  const winnerStreak = winner.winStreak || 0;
+  const isComboKO = isKO && winnerStreak >= 2; // 3rd win = instant KO
 
   // Set winner to attacking state
   if (winnerIsLeft) {
@@ -64,7 +64,7 @@ export function playWinnerAttack({
   if (isKO) {
     // Show combo message if applicable
     if (isComboKO) {
-      actions.setTieMessage(`COMBO x${loserStreak} KO!`);
+      actions.setTieMessage(`COMBO x${winnerStreak + 1} INSTANT KO!`);
     }
 
     // KO animation - attack then bump off

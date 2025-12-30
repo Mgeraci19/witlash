@@ -12,7 +12,7 @@ export interface BattlerInfo {
   hp: number;
   maxHp: number;
   submissionTime?: number; // For tie-breaking in double KO scenarios
-  lossStreak?: number; // Track consecutive losses for combo KO
+  winStreak?: number; // Track consecutive wins for combo bonuses
 }
 
 export type RevealPhase =

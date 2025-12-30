@@ -90,10 +90,10 @@ export function playTieAttack({
     let winner: "left" | "right";
     let message: string;
 
-    // Check for combo KO
-    const leftStreak = (leftBattler.lossStreak || 0) + 1;
-    const rightStreak = (rightBattler.lossStreak || 0) + 1;
-    const bothCombo = leftStreak >= 3 && rightStreak >= 3;
+    // Check for combo KO (winner's streak determines combo status)
+    const leftStreak = leftBattler.winStreak || 0;
+    const rightStreak = rightBattler.winStreak || 0;
+    const bothCombo = leftStreak >= 2 && rightStreak >= 2; // Both have 3-win potential
 
     if (leftLen !== rightLen) {
       // Shorter answer wins!
@@ -143,12 +143,13 @@ export function playTieAttack({
     const loserRef = leftKO ? refs.leftFighter : refs.rightFighter;
     const direction = leftKO ? -1 : 1;
 
-    // Check for combo KO (after taking damage, they'll have +1 streak)
-    const loserStreak = (loser.lossStreak || 0) + 1;
-    const isComboKO = loserStreak >= 3;
+    // In single KO tie, survivor gets combo increment
+    const survivorBattler = leftKO ? rightBattler : leftBattler;
+    const winnerStreak = survivorBattler.winStreak || 0;
+    const isComboKO = winnerStreak >= 2; // Will be 3rd win
 
     tieTimeline.call(() => {
-      actions.setTieMessage(isComboKO ? `COMBO x${loserStreak} KO!` : "KNOCKOUT!");
+      actions.setTieMessage(isComboKO ? `COMBO x${winnerStreak + 1} INSTANT KO!` : "KNOCKOUT!");
     });
 
     tieTimeline.to({}, { duration: 0.8 });
