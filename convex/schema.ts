@@ -17,7 +17,7 @@ export default defineSchema({
     name: v.string(),
     score: v.number(),
     isVip: v.boolean(),
-    sessionToken: v.string(), // Auth token for player actions
+    sessionToken: v.optional(v.string()), // Auth token for player actions
     // SmackTalk specific fields
     hp: v.optional(v.number()),
     maxHp: v.optional(v.number()),

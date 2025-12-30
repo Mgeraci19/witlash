@@ -27,7 +27,7 @@ export async function validatePlayer(
   if (!player) {
     throw new Error("Player not found");
   }
-  if (player.sessionToken !== sessionToken) {
+  if (!player.sessionToken || player.sessionToken !== sessionToken) {
     throw new Error("Invalid session token");
   }
   return player;
