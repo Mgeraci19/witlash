@@ -264,21 +264,31 @@ Verify in localhost:
 
 ---
 
-## Phase 4: The Cut Announcement Screen ⏳ PENDING
+## Phase 4: The Cut Announcement Screen ✅ COMPLETE
 
-**Files to modify:**
-- `src/components/host/HostRoundResultsView.tsx` - Add cut announcement
-- `src/components/host/` - New component for cut display
+**Files modified:**
+- `src/components/host/transitions/TheCutReveal.tsx` - New transition component
+- `src/components/host/transitions/index.ts` - Register transition
+- `src/components/host/transitions/TheCutReveal.test.tsx` - 13 new tests
 
 **Tasks:**
-- [ ] Create "The Cut" announcement screen after Round 1
-- [ ] Show all fighters ranked by HP
-- [ ] Highlight top 4 who advance (green)
-- [ ] Show eliminated fighters (red/gray)
-- [ ] Show corner man assignments
-- [ ] Dramatic reveal animation
+- [x] Create "The Cut" announcement screen after Round 1
+- [x] Show all fighters ranked by HP (descending order)
+- [x] Highlight top 4 who advance (green section with seed numbers #1-#4)
+- [x] Show eliminated fighters (red/gray section with ranks #5+)
+- [x] Show corner man assignments ("Now supporting [Captain Name]")
+- [x] Dramatic reveal animation (GSAP-powered with staggered entrance)
+- [x] Write tests (13 passing tests)
 
-### 🔲 USER CHECKPOINT 4: The Cut Display
+**Features:**
+- "THE CUT" title with dramatic red glow effect
+- Two-column layout: Advancing (green) vs Eliminated (red)
+- Seed numbers clearly displayed (#1, #2, #3, #4 for semifinalists)
+- HP shown for all fighters
+- Eliminated players show strikethrough name and assigned captain
+- GSAP animation: fade in, title zoom, staggered column reveals, 5s hold
+
+### ✅ USER CHECKPOINT 4: The Cut Display
 ```
 Verify in localhost:
 - [ ] After Main Round, "The Cut" screen appears
