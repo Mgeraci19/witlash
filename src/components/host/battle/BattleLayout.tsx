@@ -12,6 +12,46 @@ function formatSubmissionTime(timestamp: number): string {
   });
 }
 
+// Attack type display configuration
+const ATTACK_TYPE_CONFIG = {
+  jab: {
+    icon: "👊",
+    label: "JAB",
+    color: "text-blue-400",
+    bgColor: "bg-blue-900/50",
+    borderColor: "border-blue-500",
+    multiplier: "1x",
+  },
+  haymaker: {
+    icon: "🥊",
+    label: "HAYMAKER",
+    color: "text-orange-400",
+    bgColor: "bg-orange-900/50",
+    borderColor: "border-orange-500",
+    multiplier: "2x",
+  },
+  flyingKick: {
+    icon: "🦶",
+    label: "FLYING KICK",
+    color: "text-red-400",
+    bgColor: "bg-red-900/50",
+    borderColor: "border-red-500",
+    multiplier: "3x/4x",
+  },
+} as const;
+
+function AttackTypeBadge({ attackType }: { attackType?: "jab" | "haymaker" | "flyingKick" }) {
+  if (!attackType) return null;
+  const config = ATTACK_TYPE_CONFIG[attackType];
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${config.bgColor} border ${config.borderColor} mb-2`}>
+      <span className="text-lg">{config.icon}</span>
+      <span className={`font-bold text-sm ${config.color}`}>{config.label}</span>
+      <span className="text-xs text-gray-400">({config.multiplier})</span>
+    </div>
+  );
+}
+
 interface BattleLayoutProps {
   leftBattler: BattlerInfo;
   rightBattler: BattlerInfo;
@@ -110,7 +150,12 @@ export function BattleLayout({
                   <div className="text-base md:text-lg text-gray-400 text-center mb-1">
                     {firstAnswer.name}
                   </div>
-                  {firstAnswer.submissionTime && (
+                  {firstAnswer.attackType && (
+                    <div className="flex justify-center">
+                      <AttackTypeBadge attackType={firstAnswer.attackType} />
+                    </div>
+                  )}
+                  {firstAnswer.submissionTime && !firstAnswer.attackType && (
                     <div className="text-xs text-gray-500 text-center mb-2">
                       Submitted: {formatSubmissionTime(firstAnswer.submissionTime)}
                     </div>
@@ -174,7 +219,12 @@ export function BattleLayout({
                   <div className="text-base md:text-lg text-gray-400 text-center mb-1">
                     {secondAnswer.name}
                   </div>
-                  {secondAnswer.submissionTime && (
+                  {secondAnswer.attackType && (
+                    <div className="flex justify-center">
+                      <AttackTypeBadge attackType={secondAnswer.attackType} />
+                    </div>
+                  )}
+                  {secondAnswer.submissionTime && !secondAnswer.attackType && (
                     <div className="text-xs text-gray-500 text-center mb-2">
                       Submitted: {formatSubmissionTime(secondAnswer.submissionTime)}
                     </div>
@@ -217,17 +267,18 @@ export function BattleLayout({
         </div>
 
         {/* Message Overlay (K.O., FINISHER!, SPECIAL K.O.!, SPEED WIN!, Combo, Tie, etc.) */}
+        {/* No background dimming - text floats over action with strong shadows for readability */}
         {tieMessage && (
           tieMessage === "K.O." ? (
-            // BIG dramatic K.O. display
+            // BIG dramatic K.O. display - no dimming
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black/60"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{ zIndex: 50 }}
             >
               <div
                 className="text-[12rem] md:text-[16rem] font-black text-red-500 animate-pulse"
                 style={{
-                  textShadow: "0 0 60px rgba(239,68,68,0.9), 0 0 120px rgba(239,68,68,0.6), 0 0 180px rgba(239,68,68,0.3)",
+                  textShadow: "0 0 60px rgba(239,68,68,0.9), 0 0 120px rgba(239,68,68,0.6), 0 0 180px rgba(239,68,68,0.3), 0 4px 8px rgba(0,0,0,0.9)",
                   fontFamily: "'Impact', 'Arial Black', sans-serif",
                   letterSpacing: "0.1em",
                   WebkitTextStroke: "4px #991b1b",
@@ -237,9 +288,9 @@ export function BattleLayout({
               </div>
             </div>
           ) : tieMessage === "SPEED WIN!" ? (
-            // SPEED WIN! display - cyan/electric blue theme
+            // SPEED WIN! display - cyan/electric blue theme - no dimming
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black/60"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{ zIndex: 50 }}
             >
               <div className="relative">
@@ -258,7 +309,8 @@ export function BattleLayout({
                       0 0 40px rgba(0,255,255,1),
                       0 0 80px rgba(0,191,255,0.8),
                       0 0 120px rgba(0,127,255,0.6),
-                      0 0 200px rgba(0,100,255,0.4)
+                      0 0 200px rgba(0,100,255,0.4),
+                      0 4px 8px rgba(0,0,0,0.9)
                     `,
                     fontFamily: "'Impact', 'Arial Black', sans-serif",
                     letterSpacing: "0.05em",
@@ -270,9 +322,9 @@ export function BattleLayout({
               </div>
             </div>
           ) : (tieMessage === "FINISHER!" || tieMessage === "SPECIAL K.O.!" || tieMessage === "3 WIN K.O.!") ? (
-            // DRAMATIC GOLDEN FINISHER/SPECIAL K.O. display
+            // DRAMATIC GOLDEN FINISHER/SPECIAL K.O. display - no dimming
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black/70"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{ zIndex: 50 }}
             >
               <div className="relative">
@@ -291,7 +343,8 @@ export function BattleLayout({
                       0 0 40px rgba(255,215,0,1),
                       0 0 80px rgba(255,165,0,0.8),
                       0 0 120px rgba(255,140,0,0.6),
-                      0 0 200px rgba(255,100,0,0.4)
+                      0 0 200px rgba(255,100,0,0.4),
+                      0 4px 8px rgba(0,0,0,0.9)
                     `,
                     fontFamily: "'Impact', 'Arial Black', sans-serif",
                     letterSpacing: "0.05em",
@@ -303,9 +356,9 @@ export function BattleLayout({
               </div>
             </div>
           ) : tieMessage?.startsWith("TIE!") ? (
-            // TIE display - orange/amber theme with dynamic message
+            // TIE display - orange/amber theme with dynamic message - no dimming
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black/60"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{ zIndex: 50 }}
             >
               <div className="relative flex flex-col items-center">
@@ -324,7 +377,8 @@ export function BattleLayout({
                       0 0 40px rgba(255,165,0,1),
                       0 0 80px rgba(255,140,0,0.8),
                       0 0 120px rgba(255,100,0,0.6),
-                      0 0 200px rgba(255,69,0,0.4)
+                      0 0 200px rgba(255,69,0,0.4),
+                      0 4px 8px rgba(0,0,0,0.9)
                     `,
                     fontFamily: "'Impact', 'Arial Black', sans-serif",
                     letterSpacing: "0.1em",
@@ -333,16 +387,27 @@ export function BattleLayout({
                 >
                   TIE!
                 </div>
-                {/* Show who gets the charge */}
-                {tieMessage.includes("CHARGES") && (
+                {/* Show who answered first and gets the charge */}
+                {tieMessage.includes("answered first") && (
                   <div
                     className="text-3xl md:text-5xl font-bold mt-4 relative text-yellow-300 animate-pulse"
                     style={{
-                      textShadow: "0 0 20px rgba(255,255,0,0.8)",
+                      textShadow: "0 0 20px rgba(255,255,0,0.8), 0 4px 8px rgba(0,0,0,0.9)",
                       fontFamily: "'Impact', 'Arial Black', sans-serif",
                     }}
                   >
                     {tieMessage.replace("TIE! ", "")}
+                  </div>
+                )}
+                {tieMessage.includes("answered first") && (
+                  <div
+                    className="text-xl md:text-2xl font-bold mt-2 relative text-green-400"
+                    style={{
+                      textShadow: "0 0 15px rgba(74,222,128,0.8), 0 4px 8px rgba(0,0,0,0.9)",
+                      fontFamily: "'Impact', 'Arial Black', sans-serif",
+                    }}
+                  >
+                    Gets special charge!
                   </div>
                 )}
               </div>
@@ -350,9 +415,9 @@ export function BattleLayout({
           ) : (
             // Regular message (combo, tie, etc.)
             <div
-              className="absolute bottom-20 left-0 right-0 text-center text-3xl font-bold text-yellow-400 animate-pulse"
+              className="absolute bottom-20 left-0 right-0 text-center text-3xl font-bold text-yellow-400 animate-pulse pointer-events-none"
               style={{
-                textShadow: "0 0 20px rgba(250,204,21,0.5)",
+                textShadow: "0 0 20px rgba(250,204,21,0.5), 0 4px 8px rgba(0,0,0,0.9)",
                 fontFamily: "'Impact', 'Arial Black', sans-serif",
                 zIndex: 30,
               }}

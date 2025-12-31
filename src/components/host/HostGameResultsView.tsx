@@ -15,12 +15,12 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const confettiTriggeredRef = useRef(false);
 
-    // Sort fighters by HP to get winner
-    const fighters = game.players
-        .filter(p => p.role === "FIGHTER")
-        .sort((a, b) => (b.hp || 0) - (a.hp || 0));
-
-    const winner = fighters[0];
+    // Find the winner - the surviving fighter (not knocked out)
+    // In Final round, winner is determined by knockedOut status, not HP
+    const fighters = game.players.filter(p => p.role === "FIGHTER");
+    const survivor = fighters.find(p => !p.knockedOut);
+    // Fallback to highest HP if no clear survivor (shouldn't happen in normal gameplay)
+    const winner = survivor || fighters.sort((a, b) => (b.hp || 0) - (a.hp || 0))[0];
 
     // Get all prompts with their submissions for Q&A carousel
     const questionsWithAnswers = game.prompts?.map((prompt) => {

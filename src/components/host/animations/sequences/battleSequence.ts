@@ -134,17 +134,27 @@ function selectAttackVariant(context: AnimationContext): boolean | string {
   }
 
   // Check if this will KO the loser
+  // KO can happen via: 1) HP damage reducing HP to 0, or 2) Special bar reaching 3
   const loserCurrentHp = loser.hp || 100;
   const loserNewHp = loserCurrentHp - damage;
-  const isKO = loserNewHp <= 0;
+  const isHpKO = loserNewHp <= 0;
+
+  // Special bar KO: winner's current bar + 1 (for this win) >= 3 triggers KO
+  const winnerSpecialBar = winner.specialBar ?? 0;
+  const isSpecialBarKO = winnerSpecialBar + 1 >= 3;
+
+  const isKO = isHpKO || isSpecialBarKO;
 
   console.log(`[selectAttackVariant] KO Check:`, {
     loser: loser.name,
     currentHP: loserCurrentHp,
     damage: damage,
     newHP: loserNewHp,
-    isKO: isKO,
+    isHpKO: isHpKO,
     winner: winner.name,
+    winnerSpecialBar: winnerSpecialBar,
+    isSpecialBarKO: isSpecialBarKO,
+    isKO: isKO,
     winnerStreak: winner.winStreak || 0,
   });
 

@@ -14,6 +14,8 @@ export interface BattlerInfo {
   submissionTime?: number; // For tie-breaking in double KO scenarios
   winStreak?: number; // Track consecutive wins for combo bonuses
   wonBySpeed?: boolean; // True if this battler won via speed tiebreaker
+  attackType?: "jab" | "haymaker" | "flyingKick"; // Attack type chosen in Final round
+  specialBar?: number; // Current special bar value (0-3)
 }
 
 export type RevealPhase =

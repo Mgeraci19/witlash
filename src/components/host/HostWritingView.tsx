@@ -23,8 +23,7 @@ export function HostWritingView({ game }: HostWritingViewProps) {
         return { fighter, cornerMen };
     });
 
-    // Determine if we should show bye status (Round 2 only)
-    const isRound2 = game.currentRound === 2;
+    // Round tracking for display purposes
     const isRound3OrLater = game.currentRound >= 3;
 
     // Count submissions for current round
@@ -69,21 +68,13 @@ export function HostWritingView({ game }: HostWritingViewProps) {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 {fightersWithTeams.map(({ fighter, cornerMen }) => {
                     const hasSubmitted = submittedPlayerIds.has(fighter._id);
-                    const hasBye = isRound2 && cornerMen.length > 0;
                     const hasCornerMen = cornerMen.length > 0;
 
                     return (
                         <div
                             key={fighter._id}
-                            className={`flex flex-col items-center relative ${hasBye ? "bg-green-900/20 rounded-xl p-4 border-2 border-green-500/50" : ""}`}
+                            className="flex flex-col items-center relative"
                         >
-                            {/* BYE badge for Round 2 */}
-                            {hasBye && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-sm font-bold px-3 py-1 rounded-full z-10">
-                                    ROUND 2 BYE
-                                </div>
-                            )}
-
                             {/* Captain avatar - larger when has corner men */}
                             <FighterPlaceholder
                                 name={fighter.name}
@@ -95,8 +86,8 @@ export function HostWritingView({ game }: HostWritingViewProps) {
                             />
 
                             {/* Status text */}
-                            <div className={`mt-2 text-xl font-bold ${hasSubmitted ? "text-green-500" : hasBye ? "text-green-400" : "text-gray-500 animate-pulse"}`}>
-                                {hasBye ? "BYE" : hasSubmitted ? "READY" : "Writing..."}
+                            <div className={`mt-2 text-xl font-bold ${hasSubmitted ? "text-green-500" : "text-gray-500 animate-pulse"}`}>
+                                {hasSubmitted ? "READY" : "Writing..."}
                             </div>
 
                             {/* Corner Men display */}

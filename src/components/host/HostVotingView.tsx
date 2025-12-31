@@ -121,14 +121,22 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
 
   // Get battlers with all info
   const battlers = useMemo(() => {
+    // Sort submissions by playerId for consistent left/right positioning
+    // This ensures the same player always appears on the same side
+    const sortedSubmissions = [...currentSubmissions].sort((a, b) => {
+      const aId = (a.playerId as string) || "";
+      const bId = (b.playerId as string) || "";
+      return aId.localeCompare(bId);
+    });
+
     // Check if it's a tie first
-    const voteCountsList = currentSubmissions.map((sub) => voteCounts[sub._id as string] || 0);
+    const voteCountsList = sortedSubmissions.map((sub) => voteCounts[sub._id as string] || 0);
     const isTie = voteCountsList.length === 2 && voteCountsList[0] === voteCountsList[1];
 
     // Check for speed tiebreaker winner
-    const speedWinner = currentSubmissions.find((sub) => sub.wonBySpeed === true);
+    const speedWinner = sortedSubmissions.find((sub) => sub.wonBySpeed === true);
 
-    const result = currentSubmissions.map((sub, index) => {
+    const result = sortedSubmissions.map((sub, index) => {
       const player = game.players.find((p) => p._id === sub.playerId);
       const voteCount = voteCounts[sub._id as string] || 0;
       const voters = votersBySubmission[sub._id as string] || [];
@@ -185,11 +193,13 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
         submissionTime: leftBattler._creationTime,
         winStreak: leftBattler.player?.winStreak,
         wonBySpeed: leftBattler.wonBySpeed,
+        attackType: leftBattler.attackType as "jab" | "haymaker" | "flyingKick" | undefined,
+        specialBar: leftBattler.player?.specialBar ?? 0,
       }
     : null;
 
   if (leftBattlerInfo) {
-    console.log(`[HP BAR DATA] Left fighter: ${leftBattlerInfo.name}, winStreak: ${leftBattlerInfo.winStreak}`);
+    console.log(`[HP BAR DATA] Left fighter: ${leftBattlerInfo.name}, winStreak: ${leftBattlerInfo.winStreak}, specialBar: ${leftBattlerInfo.specialBar}`);
   }
 
   const rightBattlerInfo = rightBattler
@@ -206,6 +216,8 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
         submissionTime: rightBattler._creationTime,
         winStreak: rightBattler.player?.winStreak,
         wonBySpeed: rightBattler.wonBySpeed,
+        attackType: rightBattler.attackType as "jab" | "haymaker" | "flyingKick" | undefined,
+        specialBar: rightBattler.player?.specialBar ?? 0,
       }
     : null;
 

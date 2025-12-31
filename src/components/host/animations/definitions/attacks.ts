@@ -414,8 +414,8 @@ export const attackTieAnimation: AnimationDefinition = {
       },
     });
 
-    // Show TIE message with who gets the special charge
-    context.setTieMessage?.(`TIE! ${fasterName} CHARGES!`);
+    // Show TIE message with who answered first and gets the special charge
+    context.setTieMessage?.(`TIE! ${fasterName} answered first!`);
 
     // Set both to attacking state
     context.setFighterState?.("left", "attacking");

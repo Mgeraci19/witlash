@@ -92,28 +92,36 @@ export function FighterHealthBar({ name, hp, maxHp, side, isWinner, showDamage, 
             </div>
 
             {/* Special Bar - 3 segments that fill with wins (triggers KO at 3.0) */}
-            <div className={`flex items-center gap-2 mb-2 ${side === "right" ? "flex-row-reverse" : ""}`}>
-                <span className="text-xs text-gray-400 uppercase">Special</span>
-                <div className="flex gap-1">
-                    {[0, 1, 2].map((segment) => (
-                        <div
-                            key={segment}
-                            className={`w-8 h-4 rounded-sm border-2 transition-all duration-300 ${
-                                (specialBar ?? 0) > segment
-                                    ? "bg-gradient-to-r from-orange-500 to-yellow-400 border-yellow-500 shadow-[0_0_10px_rgba(255,165,0,0.7)]"
-                                    : "bg-gray-700 border-gray-600"
-                            }`}
-                        />
-                    ))}
+            <div className={`flex flex-col gap-1 mb-2`}>
+                <div className={`flex items-center gap-2 ${side === "right" ? "flex-row-reverse" : ""}`}>
+                    <span className="text-xs text-gray-400 uppercase">Special</span>
+                    <div className="flex gap-1">
+                        {[0, 1, 2].map((segment) => (
+                            <div
+                                key={segment}
+                                className={`w-8 h-4 rounded-sm border-2 transition-all duration-300 ${
+                                    (specialBar ?? 0) > segment
+                                        ? "bg-gradient-to-r from-orange-500 to-yellow-400 border-yellow-500 shadow-[0_0_10px_rgba(255,165,0,0.7)]"
+                                        : "bg-gray-700 border-gray-600"
+                                }`}
+                            />
+                        ))}
+                    </div>
+                    {(specialBar ?? 0) >= 2 && (
+                        <span className={`text-xs font-bold animate-pulse ${
+                            (specialBar ?? 0) >= 3 ? "text-red-500" : "text-yellow-400"
+                        }`}>
+                            {(specialBar ?? 0) >= 3
+                                ? (currentRound === 3 ? "FINISHER!" : "KO!")
+                                : "READY!"}
+                        </span>
+                    )}
                 </div>
-                {(specialBar ?? 0) >= 2 && (
-                    <span className={`text-xs font-bold animate-pulse ${
-                        (specialBar ?? 0) >= 3 ? "text-red-500" : "text-yellow-400"
-                    }`}>
-                        {(specialBar ?? 0) >= 3
-                            ? (currentRound === 3 ? "FINISHER!" : "KO!")
-                            : "READY!"}
-                    </span>
+                {/* Final round clarification - special bar resets on loss */}
+                {currentRound === 3 && (
+                    <div className={`text-xs text-gray-500 ${side === "right" ? "text-right" : "text-left"}`}>
+                        3 consecutive wins = Instant KO! {(specialBar ?? 0) > 0 ? "(Resets on loss)" : ""}
+                    </div>
                 )}
             </div>
 

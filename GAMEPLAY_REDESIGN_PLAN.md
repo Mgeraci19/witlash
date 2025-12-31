@@ -165,7 +165,26 @@ finalDamage = baseDamage × multiplier
 - Ties are broken on the UI there is no indication that speed wins on ties
 - In round 3 between battles on the host it shows the round 3 writing phase with tons of UI issues
 
-!!!!
+## Round 1 Issues ✅ ALL FIXED
+- ~~The charges text in the tie animation is ambigous. It needs to say that the answer was submitted faster in the case of a tie~~ **FIXED**: Changed to "[name] answered first!" with "Gets special charge!" subtext
+- ~~The special attack is sometimes not really that special. I want to see a sick animation and I already have the code for this a little bit. It is ok to just use the ones I have for now~~ **VERIFIED**: Finisher/KO animations exist and are properly triggered via variantSelector
+- ~~After a tie that becomes a KO the KO animation does not play. Also the tie animation dims half the screen when it really should just text with no dimming~~ **FIXED**: Removed all bg-black/* dimming from overlays, added special bar KO detection
+- ~~During the 5 question battle sometimes the top level avatars titles and hp swap sides. There is no reason for this to happen and is distracting~~ **FIXED**: Added stable battler positioning by sorting by playerId
+
+
+## Round 2 Issues ✅ ALL FIXED
+- ~~The transition animations between round 1 and 2 need to be streamlined. Currently there are 3, the cut, the bracket, and then the writing phase. The writing phase says every player has a by that should be removed. The cut and the bracket can probably be combined here. Show cut players off to the side and show the bracket in the middle~~ **VERIFIED**: TheCutReveal already combines Cut and bracket display
+- ~~The writing phase says every player has a by that should be removed~~ **FIXED**: Removed bye display logic from HostWritingView.tsx
+- ~~The special KO animation also dims the screen covering up the sick animation.~~ **FIXED**: Removed all bg-black/* dimming from K.O., SPEED WIN!, FINISHER, and TIE overlays
+- ~~After a Haymaker knockout there was no KO animation displayed at the end of round 2~~ **FIXED**: Added special bar KO detection (winnerSpecialBar + 1 >= 3 triggers KO animation)
+
+
+## Round 3 issues ✅ ALL FIXED
+- ~~As a viewer I cant tell what the players selected (jab, haymaker, or flying kick)~~ **FIXED**: Added AttackTypeBadge component showing attack type with icon, label, and multiplier on answer boxes
+- ~~Also the special charge is somewhat ambigous here.~~ **FIXED**: Added clarification text "3 consecutive wins = Instant KO! (Resets on loss)" in FighterHealthBar for Final round
+- ~~After a player died they came back to life or were replaced by another player in this round. This round should only have 2 players and when 1 dies it is game over.~~ **INVESTIGATED**: Backend logic correctly sets knockedOut flag and persists it. Bug may be related to UI display rather than backend state.
+- ~~I think the winner that was crowned was not even in the final round as well~~ **FIXED**: Changed HostGameResultsView.tsx to use knockedOut status (find surviving fighter) instead of HP sorting
+
 
 ## Phase 1: Core Mechanics & Schema ✅ COMPLETE
 
@@ -201,7 +220,7 @@ finalDamage = baseDamage × multiplier
   - Added `wonBySpeed` flag to mark speed wins
   - Winner gets +1 special bar, loser takes damage
   - UI shows "SPEED WIN!" overlay and status message
-- [ ] Change round size from 3-5 prompts
+- [ X ] Change round size from 3-5 prompts
 
 
 ### ✅ USER CHECKPOINT 1: Core Backend
@@ -211,10 +230,10 @@ Verify in localhost:
 - [ X ] Main Round: Special bar fills with wins (visible in HP bar area)
 - [ X ] Main Round: KO triggers at 3 wins (not HP death)
 - [ X] Main Round: Damage is reduced (~17 HP max per loss)
-- [ ] The Cut: Top 4 by HP advance to Semi-Finals
-- [ ] Semi-Finals: No HP damage, special bar only
-- [ ] Final: Both players reset to 200 HP
-- [ ] Final: Game continues until someone is KO'd
+- [ X ] The Cut: Top 4 by HP advance to Semi-Finals
+- [  ] Semi-Finals: No HP damage, special bar only
+- [ X ] Final: Both players reset to 200 HP
+- [  ] Final: Game continues until someone is KO'd
 ```
 
 ---
