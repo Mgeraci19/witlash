@@ -155,290 +155,44 @@ finalDamage = baseDamage × multiplier
 
 ---
 
-# Implementation Phases
+# Current Issues To Fix
 
----
+> Update this section as issues are fixed
 
-# Important UNADRESSED USER NOTES !!!
-> If you are taking on a fix for one of these be sure to update it here when done
-- Ties are broken on the UI there is no indication that speed wins on ties
+## Global Issues
+- Ties are broken on the UI but there is no indication that speed wins on ties
 - In round 3 between battles on the host it shows the round 3 writing phase with tons of UI issues
 
-## Round 1 Issues ✅ ALL FIXED
+## Round 1 Issues
 - The special bar never fully charges on the UI. After a winning vote but before a KO it should become full and shake or something
-
 - There is a bug with the health here. People are healing after rounds when they should not be able to
 
-## Round 2 Issues ✅ ALL FIXED
+## Round 2 Issues
 - The KO here does not do any animation
 
-
-
-## Round 3 issues ✅ ALL FIXED
+## Round 3 Issues
 - The flying kick and stuff is super small and hard to see. Considering this is the final round the animation on that should be better. I want to see ATTEMPTED SUCCEEDED under the winner with the attack they chose and ATTEMPTED FAILED under the loser with the attack they chose. Then I should see the attack animated specifically for that successful attack and the multiplier that is applied from the max of the loser and the winners multiplier
-
-
-
-
-## Phase 1: Core Mechanics & Schema ✅ COMPLETE
-
-**Files modified:**
-- `convex/schema.ts`
-- `convex/lib/gameLogic.ts`
-- `convex/lib/phases.ts`
-- `convex/engine.ts`
-- `convex/actions.ts`
-- `convex/bots.ts`
-
-**Tasks:**
-- [x] Add `specialBar` field to player schema
-- [x] Add `attackType` to submission schema (`jab` | `haymaker` | `flyingKick`)
-- [x] Modify `resolveBattle()`:
-  - [x] Track special bar (+1.0 per win)
-  - [x] KO when bar reaches 3.0
-  - [x] Apply 0.5x damage multiplier for Main Round
-  - [x] Prevent damage after KO (loser can't hurt winner)
-- [x] Implement post-KO healing (vote margin based)
-- [x] Implement "The Cut" logic after Main Round
-- [x] Create semi-final bracket (top 4 by HP)
-- [x] Implement random corner man assignment for eliminated fighters
-- [x] Reset finalists to 200 HP
-- [x] Implement attack type selection in actions.ts
-- [x] Implement "higher multiplier" damage resolution
-- [x] Implement final-specific special bar (resets on non-win)
-- [x] Infinite prompt generation until KO
-- [x] Update bot logic for attack types
-- [x] Update all backend tests (59 tests passing)
-- [x] **Speed Tiebreaker**: Ties now use submission speed to determine winner
-  - Added `submittedAt` timestamp to submissions
-  - Added `wonBySpeed` flag to mark speed wins
-  - Winner gets +1 special bar, loser takes damage
-  - UI shows "SPEED WIN!" overlay and status message
-- [ X ] Change round size from 3-5 prompts
-
-
-### ✅ USER CHECKPOINT 1: Core Backend
-```
-Verify in localhost:
-- [ X ] Start a game with 8+ players
-- [ X ] Main Round: Special bar fills with wins (visible in HP bar area)
-- [ X ] Main Round: KO triggers at 3 wins (not HP death)
-- [ X] Main Round: Damage is reduced (~17 HP max per loss)
-- [ X ] The Cut: Top 4 by HP advance to Semi-Finals
-- [  ] Semi-Finals: No HP damage, special bar only
-- [ X ] Final: Both players reset to 200 HP
-- [  ] Final: Game continues until someone is KO'd
-```
+- The champion page has the avatar overlapping with the word champion
 
 ---
 
-## Phase 2: Special Bar UI ✅ COMPLETE
+# Completed Implementation Summary
 
-**Files modified:**
-- `src/components/host/FighterHealthBar.tsx`
-- `src/components/host/HostVotingView.tsx`
+The following phases have been fully implemented:
 
-**Tasks:**
-- [x] Update FighterHealthBar to use `specialBar` instead of `winStreak`
-- [x] Pass `specialBar` and `currentRound` from HostVotingView
-- [x] Display "READY!" at 2 bars, "KO!" at 3 bars
-- [x] Display "FINISHER!" for 3 bars in Final round
+1. **Core Mechanics & Schema** - specialBar, attackType, damage resolution, The Cut logic, bracket seeding, corner man assignment, speed tiebreaker with `submittedAt` and `wonBySpeed`
 
-### ✅ USER CHECKPOINT 2: Special Bar Display
-```
-Verify in localhost:
-- [ X ] Special bar shows 3 segments below fighter name
-- [ X ] Segments fill orange/yellow when wins accumulate
-- [ X] Shows "READY!" when at 2 bars
-- [ X ] Shows "KO!" when at 3 bars (Main Round/Semi-Finals)
-- [  ] Shows "FINISHER!" when at 3 bars (Final round)
-```
+2. **Special Bar UI** - 3-segment display, READY!/KO!/FINISHER! labels, currentRound awareness
 
----
+3. **Attack Type Selection** - Jab/Haymaker/Flying Kick buttons in Final round, risk/reward display, bot support
 
-## Phase 3: Attack Type Selection UI ✅ COMPLETE
+4. **The Cut Announcement** - Ranked display, advancing vs eliminated, corner man assignments, GSAP animations
 
-**Files modified:**
-- `src/components/game/cards/PromptCard.tsx` - Add attack type buttons and selection
-- `src/components/game/FighterWritingView.tsx` - Pass round info and attack type to mutation
-- `src/components/game/CaptainWritingView.tsx` - Support attack type for corner men submitting for bots
-- `src/components/game/cards/SuggestionCard.tsx` - Attack type selection for bot captains
-- `src/components/game/cards/PromptCard.test.tsx` - 15 new tests for attack type selection
-
-**Tasks:**
-- [x] Add attack type selection buttons (Jab/Haymaker/Flying Kick)
-- [x] Only show in Final round (Round 3)
-- [x] Show risk/reward info for each attack type (color-coded by risk level)
-- [x] Default to "jab" if not selected
-- [x] Pass attackType to submitAnswer mutation
-- [x] Support attack type selection for corner men controlling bot captains
-- [x] Write tests (15 passing tests)
-
-### ✅ USER CHECKPOINT 3: Attack Type Selection
-```
-Verify in localhost:
-- [ X ] In Final round, player sees attack type buttons when writing answer
-- [ X ] Buttons show: Jab (1x), Haymaker (2x), Flying Kick (3x/4x)
-- [ X ] Selected attack type is sent with submission
-- [ - ] Attack type affects damage calculation
-```
-
----
-
-## Phase 4: The Cut Announcement Screen ✅ COMPLETE
-
-**Files modified:**
-- `src/components/host/transitions/TheCutReveal.tsx` - New transition component
-- `src/components/host/transitions/index.ts` - Register transition
-- `src/components/host/transitions/TheCutReveal.test.tsx` - 13 new tests
-
-**Tasks:**
-- [x] Create "The Cut" announcement screen after Round 1
-- [x] Show all fighters ranked by HP (descending order)
-- [x] Highlight top 4 who advance (green section with seed numbers #1-#4)
-- [x] Show eliminated fighters (red/gray section with ranks #5+)
-- [x] Show corner man assignments ("Now supporting [Captain Name]")
-- [x] Dramatic reveal animation (GSAP-powered with staggered entrance)
-- [x] Write tests (13 passing tests)
-
-**Features:**
-- "THE CUT" title with dramatic red glow effect
-- Two-column layout: Advancing (green) vs Eliminated (red)
-- Seed numbers clearly displayed (#1, #2, #3, #4 for semifinalists)
-- HP shown for all fighters
-- Eliminated players show strikethrough name and assigned captain
-- GSAP animation: fade in, title zoom, staggered column reveals, 5s hold
-
-### ✅ USER CHECKPOINT 4: The Cut Display
-```
-Verify in localhost:
-- [X] After Main Round, "The Cut" screen appears
-- [ X ] All players ranked by HP
-- [ X ] Top 4 highlighted as advancing
-- [ - ] Eliminated players shown with corner man assignments \\\ Still seeing a round 2 wtiting pohase popup here with a bye. Doesnt effect functionality but the UI needs to be updated to be in line with the logic above
-- [ X ] Clear visual distinction between advancing/eliminated
-```
-
----
-
-## Phase 5: Semi-Final Bracket Display ⏳ PENDING
-
-**Files to modify:**
-- `src/components/host/HostRoundResultsView.tsx`
-- `src/components/host/` - Bracket visualization component
-
-**Tasks:**
-- [ ] Create bracket visualization for semi-finals
-- [ ] Show #1 vs #4 and #2 vs #3 matchups
-- [ ] Display HP for each fighter
-- [ ] Show winner advancing to final
-- [ ] Tournament bracket style layout
-
-### 🔲 USER CHECKPOINT 5: Semi-Final Bracket
-```
-Verify in localhost:
-- [ ] Semi-final shows tournament bracket
-- [ ] Seeding visible (#1 vs #4, #2 vs #3)
-- [ ] Winners clearly marked after matches
-- [ ] Bracket shows path to Final
-```
-
----
-
-## Phase 6: Bragging Round Messages ⏳ PENDING
-
-**Files to modify:**
-- `src/components/host/HostVotingView.tsx` - Add bragging messages
-- `convex/lib/gameLogic.ts` - Track if player already KO'd
-
-**Tasks:**
-- [ ] Detect when Prompt 4 plays in Semi-Finals (after KO)
-- [ ] If KO'd player loses again: "Stop! He's already dead!"
-- [ ] If KO'd player wins: "How did you miss a guy knocked out on the floor?"
-- [ ] Dramatic text animation for messages
-
-### 🔲 USER CHECKPOINT 6: Bragging Round
-```
-Verify in localhost:
-- [ ] Semi-Finals Prompt 4 plays even after KO
-- [ ] Appropriate message displays based on outcome
-- [ ] Message is dramatic and visible
-```
-
----
-
-## Phase 7: Attack Type Reveal Animation ⏳ PENDING
-
-**Files to modify:**
-- `src/components/host/HostVotingView.tsx`
-- `src/components/host/animations/` - New attack reveal animations
-
-**Tasks:**
-- [ ] Show attack type icons during Final reveal
-- [ ] Animate the attack type selection
-- [ ] Show damage multiplier calculation
-- [ ] Different visual effects for jab/haymaker/flying kick
-
-### 🔲 USER CHECKPOINT 7: Attack Type Reveal
-```
-Verify in localhost:
-- [ ] Final round shows attack types during reveal
-- [ ] Visual distinction between attack types
-- [ ] Multiplier shown in damage display
-```
-
----
-
-## Phase 8: Cleanup & Polish 🔄 PARTIAL
-
-**Files modified:**
-- `convex/lib/phases.ts` - Removed deprecated functions; Added promptType to Semi-Finals prompts (3 jabs + 1 haymaker)
-- `convex/lobby.ts` - Changed maxRounds from 4 to 3, updated function import
-- `convex/actions.ts` - Fixed Round 4 references to Round 3 (Final)
-- `convex/lobby.test.ts` - Updated expected maxRounds from 4 to 3
-- `convex/engine.ts` - Fixed hostTriggerNextBattle to allow bragging round (prompt 4) in Semi-Finals
-- `convex/schema.ts` - Added promptType field to prompts table (jab | haymaker)
-- `src/components/host/transitions/index.ts` - Removed Round Robin transition, renamed sudden-death-intro to final-intro
-- `src/components/host/transitions/SuddenDeathIntro.tsx` - Updated comments for Round 3, HP reset to 200
-- `src/components/host/transitions/CornerMenReveal.tsx` - Marked as DEPRECATED
-- `src/components/host/HostVotingView.tsx` - Added JAB/HAYMAKER indicator for Semi-Finals prompts
-- `convex/bots.ts` - Bots generate single-word answers for Semi-Finals jab prompts
-- `src/components/game/cards/PromptCard.tsx` - Added jab/haymaker indicator, single-word validation
-- `src/components/game/FighterWritingView.tsx` - Pass currentRound to PromptCard
-
-**Completed Tasks:**
-- [x] Remove deprecated legacy functions from phases.ts
-- [x] Remove Round 4/Round Robin code paths
-- [x] Update maxRounds from 4 to 3
-- [x] Fix transition triggers for 3-round structure
-- [x] Mark deprecated transitions for future UI cleanup
-- [x] **Semi-Finals Jab/Haymaker Fix**: Prompts 1-3 are jabs (+1 special bar), prompt 4 is haymaker (bragging round)
-- [x] **Bragging Round Fix**: hostTriggerNextBattle now allows prompt 4 to play after KO in Semi-Finals
-- [x] **UI Indicator**: Shows 👊 JAB or 🥊 HAYMAKER during Semi-Finals
-- [x] **Single-Word Jab Enforcement**: Jab prompts (1-3) require single-word answers
-  - Backend validation in `actions.ts` rejects multi-word jab submissions
-  - Bots generate single-word answers for jab prompts
-  - Player UI shows "One word only..." placeholder and validation warning
-  - Input field turns red with word count warning when invalid
-
-**Remaining Tasks:**
-- [ ] Update round name constants (Round 1 → "Main Round", etc.)
-- [ ] Update host display round labels
-- [ ] Final code cleanup
-
-### 🔲 USER CHECKPOINT 8: Final Polish
-```
-Verify in localhost:
-- [ ] Round names display correctly ("Main Round", "Semi-Finals", "Final")
-- [ ] No console errors or warnings
-- [x] Full game playthrough works end-to-end (3 rounds only)
-```
+5. **Semi-Finals Jab/Haymaker** - Single-word jab enforcement, bragging round (prompt 4), UI indicators
 
 ---
 
 ## Notes for Future Expansion
 - **Bot improvements:** Improve bot answer quality. This is top priority future expansion as bots will fill in the gaps for missing players. It would also be fun to make the bots funnier than the players. This could allow me to expand the semis to become a quaterfinal
-
-
 - **Audio:** Add sound effects for attack types
 - **Animations:** Different visuals for jab/haymaker/flying kick
