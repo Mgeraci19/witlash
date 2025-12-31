@@ -161,29 +161,23 @@ finalDamage = baseDamage × multiplier
 
 # Important UNADRESSED USER NOTES !!!
 > If you are taking on a fix for one of these be sure to update it here when done
-- ~~Round 2 is busted. It does not do the 2 jab 1 haymaker functionality that is described in the plan. It needs to be fully fixed~~ **FIXED**: Semi-Finals now has 3 jabs + 1 haymaker prompts with proper promptType tracking, UI shows JAB/HAYMAKER indicator, bragging round (prompt 4) plays after KO
 - Ties are broken on the UI there is no indication that speed wins on ties
 - In round 3 between battles on the host it shows the round 3 writing phase with tons of UI issues
 
 ## Round 1 Issues ✅ ALL FIXED
-- ~~The charges text in the tie animation is ambigous. It needs to say that the answer was submitted faster in the case of a tie~~ **FIXED**: Changed to "[name] answered first!" with "Gets special charge!" subtext
-- ~~The special attack is sometimes not really that special. I want to see a sick animation and I already have the code for this a little bit. It is ok to just use the ones I have for now~~ **VERIFIED**: Finisher/KO animations exist and are properly triggered via variantSelector
-- ~~After a tie that becomes a KO the KO animation does not play. Also the tie animation dims half the screen when it really should just text with no dimming~~ **FIXED**: Removed all bg-black/* dimming from overlays, added special bar KO detection
-- ~~During the 5 question battle sometimes the top level avatars titles and hp swap sides. There is no reason for this to happen and is distracting~~ **FIXED**: Added stable battler positioning by sorting by playerId
+- The special bar never fully charges on the UI. After a winning vote but before a KO it should become full and shake or something
 
+- There is a bug with the health here. People are healing after rounds when they should not be able to
 
 ## Round 2 Issues ✅ ALL FIXED
-- ~~The transition animations between round 1 and 2 need to be streamlined. Currently there are 3, the cut, the bracket, and then the writing phase. The writing phase says every player has a by that should be removed. The cut and the bracket can probably be combined here. Show cut players off to the side and show the bracket in the middle~~ **VERIFIED**: TheCutReveal already combines Cut and bracket display
-- ~~The writing phase says every player has a by that should be removed~~ **FIXED**: Removed bye display logic from HostWritingView.tsx
-- ~~The special KO animation also dims the screen covering up the sick animation.~~ **FIXED**: Removed all bg-black/* dimming from K.O., SPEED WIN!, FINISHER, and TIE overlays
-- ~~After a Haymaker knockout there was no KO animation displayed at the end of round 2~~ **FIXED**: Added special bar KO detection (winnerSpecialBar + 1 >= 3 triggers KO animation)
+- The KO here does not do any animation
+
 
 
 ## Round 3 issues ✅ ALL FIXED
-- ~~As a viewer I cant tell what the players selected (jab, haymaker, or flying kick)~~ **FIXED**: Added AttackTypeBadge component showing attack type with icon, label, and multiplier on answer boxes
-- ~~Also the special charge is somewhat ambigous here.~~ **FIXED**: Added clarification text "3 consecutive wins = Instant KO! (Resets on loss)" in FighterHealthBar for Final round
-- ~~After a player died they came back to life or were replaced by another player in this round. This round should only have 2 players and when 1 dies it is game over.~~ **INVESTIGATED**: Backend logic correctly sets knockedOut flag and persists it. Bug may be related to UI display rather than backend state.
-- ~~I think the winner that was crowned was not even in the final round as well~~ **FIXED**: Changed HostGameResultsView.tsx to use knockedOut status (find surviving fighter) instead of HP sorting
+- The flying kick and stuff is super small and hard to see. Considering this is the final round the animation on that should be better. I want to see ATTEMPTED SUCCEEDED under the winner with the attack they chose and ATTEMPTED FAILED under the loser with the attack they chose. Then I should see the attack animated specifically for that successful attack and the multiplier that is applied from the max of the loser and the winners multiplier
+
+
 
 
 ## Phase 1: Core Mechanics & Schema ✅ COMPLETE
