@@ -79,7 +79,7 @@ export const attackFinisherSpellAnimation: AnimationDefinition = {
   tags: ["attack", "ko", "finisher", "special"],
 
   create: (context) => {
-    const { direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser } =
+    const { direction: _direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser: _loser } =
       getAttackData(context);
     const arenaRef = context.refs.arena;
 
@@ -197,7 +197,7 @@ export const attackFinisherEnergyAnimation: AnimationDefinition = {
   tags: ["attack", "ko", "finisher", "special"],
 
   create: (context) => {
-    const { direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser } =
+    const { direction: _direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser: _loser } =
       getAttackData(context);
     const arenaRef = context.refs.arena;
     const arenaWidth = arenaRef.current?.clientWidth || 800;
@@ -327,7 +327,7 @@ export const attackFinisherPunchAnimation: AnimationDefinition = {
   tags: ["attack", "ko", "finisher", "special"],
 
   create: (context) => {
-    const { direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser } =
+    const { direction: _direction, winnerRef, loserRef, loserSide, winnerSide, damage, winner, loser: _loser } =
       getAttackData(context);
     const arenaRef = context.refs.arena;
     const arenaWidth = arenaRef.current?.clientWidth || 800;

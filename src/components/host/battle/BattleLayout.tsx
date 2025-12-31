@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 "use client";
 
 import { AvatarFighter } from "../AvatarFighter";
@@ -73,7 +74,7 @@ export function BattleLayout({
   state,
   refs,
 }: BattleLayoutProps) {
-  const { phase, displayedVotes, tieMessage, leftFighterState, rightFighterState, answerOrder } = state;
+  const { phase, tieMessage, leftFighterState, rightFighterState, answerOrder } = state;
   const { showVotes, showWinner, showAuthors } = getVisibilityFlags(phase);
 
   // Get answer data based on randomized order

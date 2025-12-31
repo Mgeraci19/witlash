@@ -117,7 +117,7 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
       totalVotes: total,
       votersBySubmission: voters,
     };
-  }, [currentVotes]);
+  }, [currentVotes, game.players]);
 
   // Get battlers with all info
   const battlers = useMemo(() => {
@@ -239,11 +239,14 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   // Sync animated HP when battlers change (new players in battle)
   useEffect(() => {
     if (leftBattler?.player) {
+       
       setAnimatedLeftHp(leftBattler.player.hp ?? 100);
     }
     if (rightBattler?.player) {
+       
       setAnimatedRightHp(rightBattler.player.hp ?? 100);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leftBattler?.player?._id, rightBattler?.player?._id]);
 
   // Callbacks
@@ -283,17 +286,23 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   // Reset battle complete and HP tracking when prompt changes
   useEffect(() => {
     console.log("[BATTLE RESET] New prompt, resetting battle state. Prompt ID:", game.currentPromptId);
+     
     setBattleComplete(false);
     // Clear damage displays
+     
     setLeftShowDamage(undefined);
+     
     setRightShowDamage(undefined);
     // Re-sync HP from current player data
     if (leftBattler?.player) {
+       
       setAnimatedLeftHp(leftBattler.player.hp ?? 100);
     }
     if (rightBattler?.player) {
+       
       setAnimatedRightHp(rightBattler.player.hp ?? 100);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.currentPromptId, leftBattler?.player?._id, rightBattler?.player?._id]);
 
   return (

@@ -108,7 +108,7 @@ export const battleEntryAnimation: AnimationDefinition = {
     );
   },
 
-  onComplete: (context) => {
+  onComplete: (_context) => {
     console.log("[battleEntryAnimation] Entry complete, now in voting phase");
   },
 };

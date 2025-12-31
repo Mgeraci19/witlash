@@ -8,7 +8,7 @@ interface UseBattleStateOptions {
   rightBattler: BattlerInfo | null;
 }
 
-export function useBattleState({ promptId, leftBattler, rightBattler }: UseBattleStateOptions) {
+export function useBattleState({ promptId: _promptId, leftBattler: _leftBattler, rightBattler: _rightBattler }: UseBattleStateOptions) {
   // Phase tracking
   const [phase, setPhase] = useState<RevealPhase>("waiting");
   const [displayedVotes, setDisplayedVotes] = useState({ left: 0, right: 0 });
@@ -25,7 +25,7 @@ export function useBattleState({ promptId, leftBattler, rightBattler }: UseBattl
   // Deterministic answer order - always left to left corner, right to right corner
   const answerOrder = useMemo(() => {
     return { first: "left" as const, second: "right" as const };
-  }, [leftBattler, rightBattler]);
+  }, []);
 
   // Reset function
   const reset = useCallback(() => {

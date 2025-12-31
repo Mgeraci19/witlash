@@ -269,9 +269,9 @@ export const attackComboKOAnimation: AnimationDefinition = {
     }
 
     const winner = winnerIsLeft ? leftBattler : rightBattler;
-    const loser = winnerIsLeft ? rightBattler : leftBattler;
+    const _loser = winnerIsLeft ? rightBattler : leftBattler;
     const damage = winnerIsLeft ? rightDamage : leftDamage;
-    const direction = winnerIsLeft ? 1 : -1;
+    const _direction = winnerIsLeft ? 1 : -1;
 
     const winnerRef = winnerIsLeft ? context.refs.leftFighter : context.refs.rightFighter;
     const loserRef = winnerIsLeft ? context.refs.rightFighter : context.refs.leftFighter;

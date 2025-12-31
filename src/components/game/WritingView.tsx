@@ -18,7 +18,7 @@ interface WritingViewProps {
     answers?: Record<string, string>;
 }
 
-export function WritingView({ game, playerId, sessionToken, startGame, submitAnswer, submitAnswerForBot, submitSuggestion }: WritingViewProps) {
+export function WritingView({ game, playerId, sessionToken, startGame: _startGame, submitAnswer, submitAnswerForBot, submitSuggestion }: WritingViewProps) {
     const myPlayer = game.players.find((p) => p._id === playerId);
     const isCornerMan = myPlayer?.role === "CORNER_MAN";
     const myTeamId = myPlayer?.teamId;

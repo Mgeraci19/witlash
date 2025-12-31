@@ -160,8 +160,8 @@ finalDamage = baseDamage × multiplier
 > Update this section as issues are fixed
 
 ## Global Issues
-- Ties are broken on the UI but there is no indication that speed wins on ties
-- In round 3 between battles on the host it shows the round 3 writing phase with tons of UI issues
+- There is a lack of explanation of how the scoring and game works. Add something to the lobby screen and the transition screens that explain the rules
+- Currently the Avatars are on a white background. They should be on a black background to be consistent with the game. This would open the potential of removing the border around the avatar to make them seem more natureal in the game 
 
 ## Round 1 Issues
 - The special bar never fully charges on the UI. After a winning vote but before a KO it should become full and shake or something
@@ -175,6 +175,12 @@ finalDamage = baseDamage × multiplier
 - The champion page has the avatar overlapping with the word champion
 
 ---
+## Priority improvements:(Not planned or started)
+- **Bot improvements:** Improve bot answer quality. This is top priority future expansion as bots will fill in the gaps for missing players. It would also be fun to make the bots funnier than the players. This could allow me to expand the semis to become a quaterfinal
+- **Prompt Improvements:** Add more prompts to the database and make them funnier. Use the players names as inserts in some of the prompts
+
+- **Audio:** Add sound effects for attack types
+
 
 # Completed Implementation Summary
 
@@ -193,6 +199,5 @@ The following phases have been fully implemented:
 ---
 
 ## Notes for Future Expansion
-- **Bot improvements:** Improve bot answer quality. This is top priority future expansion as bots will fill in the gaps for missing players. It would also be fun to make the bots funnier than the players. This could allow me to expand the semis to become a quaterfinal
-- **Audio:** Add sound effects for attack types
+
 - **Animations:** Different visuals for jab/haymaker/flying kick
