@@ -1,5 +1,6 @@
 import type { AnimationSequence, AnimationContext } from "../core/types";
 import { animationRegistry } from "../core/AnimationRegistry";
+import { TIMINGS } from "../config";
 
 /**
  * BATTLE_SEQUENCE - The complete battle animation flow
@@ -21,10 +22,10 @@ export const BATTLE_SEQUENCE: AnimationSequence = {
   id: "battle",
   name: "Battle Sequence",
   steps: [
-    // ===== STEP 1: Entry Sequence (7.4s - SACRED) =====
+    // ===== STEP 1: Entry Sequence =====
     {
       animation: "battle-entry",
-      duration: 7.4, // SACRED - do not change
+      duration: TIMINGS.entrySequence,
     },
 
     // ===== STEP 2: Wait for Reveal Signal =====
@@ -38,35 +39,34 @@ export const BATTLE_SEQUENCE: AnimationSequence = {
       },
     },
 
-    // ===== STEP 3: Slide Answers to Corners (0.5s) =====
+    // ===== STEP 3: Slide Answers to Corners =====
     {
       animation: "slide-answers",
-      duration: 0.5,
+      duration: TIMINGS.slideAnswers,
     },
 
-    // ===== STEP 4: Pause for Reaction (0.8s) =====
+    // ===== STEP 4: Pause for Reaction =====
     {
       animation: "pause",
-      duration: 0.8,
+      duration: TIMINGS.reactionPause,
     },
 
-    // ===== STEP 5: Reveal Votes (0.6s) =====
+    // ===== STEP 5: Reveal Votes =====
     {
       animation: "reveal-votes",
-      duration: 0.6,
+      duration: TIMINGS.revealVotes,
     },
 
-    // ===== STEP 6: Pause After Votes (1.0s) =====
+    // ===== STEP 6: Pause After Votes =====
     {
       animation: "pause",
-      duration: 1.0,
+      duration: TIMINGS.postVotePause,
     },
 
     // ===== STEP 7: Attack Animation (varies) =====
     // Conditional: Select attack variant based on game state
     {
       animation: "attack", // Placeholder - will be replaced by variant selector
-      duration: 1.5, // Max duration (KO takes 1.05s)
       conditional: selectAttackVariant,
     },
   ],
@@ -86,29 +86,63 @@ export const BATTLE_SEQUENCE: AnimationSequence = {
  * @returns The animation ID to use, or false to skip
  */
 function selectAttackVariant(context: AnimationContext): boolean | string {
-  const { leftBattler, rightBattler, leftDamage, rightDamage } = context;
+  // Use getter functions for CURRENT data (not stale captured values)
+  const leftBattler = context.getLeftBattler?.() ?? context.leftBattler;
+  const rightBattler = context.getRightBattler?.() ?? context.rightBattler;
+  const leftDamage = context.getLeftDamage?.() ?? context.leftDamage;
+  const rightDamage = context.getRightDamage?.() ?? context.rightDamage;
 
   if (!leftBattler || !rightBattler) {
     console.warn("[selectAttackVariant] Missing battler data, skipping attack");
     return false;
   }
 
-  // Check if it's a tie
+  console.log(`[selectAttackVariant] Left: ${leftBattler.name} (${leftBattler.voteCount} votes, isWinner: ${leftBattler.isWinner}), Right: ${rightBattler.name} (${rightBattler.voteCount} votes, isWinner: ${rightBattler.isWinner})`);
+
+  // Determine if there's a winner or a tie using vote counts as source of truth
   const isTie = leftBattler.voteCount === rightBattler.voteCount;
+
   if (isTie) {
-    // TODO: Implement tie attack animation
-    console.log("[selectAttackVariant] Tie detected - using normal attack for now");
-    return "attack-normal";
+    console.log("[selectAttackVariant] TIE (equal votes) - using tie attack animation");
+    return "attack-tie";
   }
 
-  // Determine winner and loser
-  const winner = leftBattler.isWinner ? leftBattler : rightBattler;
-  const loser = leftBattler.isWinner ? rightBattler : leftBattler;
-  const damage = leftBattler.isWinner ? rightDamage : leftDamage;
+  // Not a tie - determine winner
+  // Use isWinner flag first, fall back to vote counts
+  let winner, loser, damage;
+  if (leftBattler.isWinner) {
+    winner = leftBattler;
+    loser = rightBattler;
+    damage = rightDamage;
+    console.log(`[selectAttackVariant] Winner: ${winner.name} (LEFT) via isWinner flag`);
+  } else if (rightBattler.isWinner) {
+    winner = rightBattler;
+    loser = leftBattler;
+    damage = leftDamage;
+    console.log(`[selectAttackVariant] Winner: ${winner.name} (RIGHT) via isWinner flag`);
+  } else {
+    // Fallback: Use vote counts (isWinner not set correctly)
+    const leftWins = leftBattler.voteCount > rightBattler.voteCount;
+    winner = leftWins ? leftBattler : rightBattler;
+    loser = leftWins ? rightBattler : leftBattler;
+    damage = leftWins ? rightDamage : leftDamage;
+    console.warn(`[selectAttackVariant] isWinner not set, using vote counts as fallback - Winner: ${winner.name}`);
+  }
 
   // Check if this will KO the loser
-  const loserNewHp = (loser.hp || 100) - damage;
+  const loserCurrentHp = loser.hp || 100;
+  const loserNewHp = loserCurrentHp - damage;
   const isKO = loserNewHp <= 0;
+
+  console.log(`[selectAttackVariant] KO Check:`, {
+    loser: loser.name,
+    currentHP: loserCurrentHp,
+    damage: damage,
+    newHP: loserNewHp,
+    isKO: isKO,
+    winner: winner.name,
+    winnerStreak: winner.winStreak || 0,
+  });
 
   if (isKO) {
     // Check for combo KO (3-win streak)

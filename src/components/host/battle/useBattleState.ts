@@ -22,16 +22,14 @@ export function useBattleState({ promptId, leftBattler, rightBattler }: UseBattl
   const hasStartedRef = useRef(false);
   const hasRevealedRef = useRef(false);
 
-  // Randomize answer order (consistent for this prompt)
+  // Deterministic answer order - always left to left corner, right to right corner
   const answerOrder = useMemo(() => {
-    if (!leftBattler || !rightBattler) return { first: "left" as const, second: "right" as const };
-    return Math.random() > 0.5
-      ? { first: "left" as const, second: "right" as const }
-      : { first: "right" as const, second: "left" as const };
-  }, [promptId]); // eslint-disable-line react-hooks/exhaustive-deps
+    return { first: "left" as const, second: "right" as const };
+  }, [leftBattler, rightBattler]);
 
   // Reset function
   const reset = useCallback(() => {
+    console.log("[useBattleState] Resetting battle state");
     hasStartedRef.current = false;
     hasRevealedRef.current = false;
     setPhase("waiting");

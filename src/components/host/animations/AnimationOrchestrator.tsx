@@ -3,7 +3,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import type { GameState } from "@/lib/types";
 import type { BattlerInfo } from "../battle/types";
-import type { BattleSide } from "./registry/types";
+import type { BattleSide } from "./core/types";
 import type { AnimationContext } from "./core/types";
 import { AnimationSequencer } from "./core/AnimationSequencer";
 import { animationRegistry } from "./core/AnimationRegistry";
@@ -58,6 +58,10 @@ export function AnimationOrchestrator({
   // Sequencer instance (persistent across renders)
   const sequencer = useRef(new AnimationSequencer());
 
+  // Ref to always have latest gameState for condition checks
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
   // Track previous state to detect changes
   const previousPromptRef = useRef(currentPromptId);
 
@@ -74,6 +78,16 @@ export function AnimationOrchestrator({
   onBattleCompleteRef.current = onBattleComplete;
   onDamageAppliedRef.current = onDamageApplied;
 
+  // Store dynamic data in refs for getter functions (always current)
+  const leftBattlerRef = useRef(leftBattler);
+  const rightBattlerRef = useRef(rightBattler);
+  const leftDamageRef = useRef(leftDamage);
+  const rightDamageRef = useRef(rightDamage);
+  leftBattlerRef.current = leftBattler;
+  rightBattlerRef.current = rightBattler;
+  leftDamageRef.current = leftDamage;
+  rightDamageRef.current = rightDamage;
+
   // Build animation context (memoized to avoid recreating on every render)
   const animationContext: AnimationContext = useMemo(
     () => ({
@@ -84,8 +98,14 @@ export function AnimationOrchestrator({
       promptId: currentPromptId,
       leftDamage,
       rightDamage,
+      // Getter functions that return CURRENT data (not stale captured values)
+      getLeftBattler: () => leftBattlerRef.current,
+      getRightBattler: () => rightBattlerRef.current,
+      getLeftDamage: () => leftDamageRef.current,
+      getRightDamage: () => rightDamageRef.current,
       answerOrder: state.answerOrder,
       gameState,
+      getGameState: () => gameStateRef.current, // Always return latest
       onDamageApplied: onDamageAppliedRef.current,
       onComplete: onBattleCompleteRef.current,
       setPhase: actions.setPhase,

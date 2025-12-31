@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "../animations/gsapConfig";
 import { useScreenShake } from "../animations/useScreenShake";
 import { AvatarFighter } from "../AvatarFighter";
@@ -19,24 +19,54 @@ export function SuddenDeathIntro({ gameState, onComplete }: TransitionProps) {
   const textRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLDivElement>(null);
   const { containerRef, shake } = useScreenShake();
+  const [shouldSkip, setShouldSkip] = useState(false);
+  const completedRef = useRef(false);
 
-  // Get the two finalists (fighters with role "PLAYER" in Round 4)
+  // Stable reference to onComplete
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Safe completion handler
+  const safeComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onCompleteRef.current();
+      });
+    });
+  }, []);
+
+  // Get the two finalists (fighters with role "FIGHTER" in Round 4)
   const finalists = gameState.players
-    ?.filter((p) => p.role === "PLAYER" && !p.knockedOut)
+    ?.filter((p) => p.role === "FIGHTER" && !p.knockedOut)
     .sort((a, b) => (b.hp ?? 0) - (a.hp ?? 0))
     .slice(0, 2) || [];
 
   const leftFighter = finalists[0];
   const rightFighter = finalists[1];
 
+  // Handle skip case in useEffect to avoid setState during render
   useEffect(() => {
+    if ((!leftFighter || !rightFighter) && !completedRef.current) {
+      setShouldSkip(true);
+      safeComplete();
+    }
+  }, [leftFighter, rightFighter, safeComplete]);
+
+  useEffect(() => {
+    // Don't run animation if we're skipping or already completed
+    if (shouldSkip || !leftFighter || !rightFighter || completedRef.current) {
+      return;
+    }
+
     if (!overlayRef.current || !leftFighterRef.current || !rightFighterRef.current || !textRef.current || !subtitleRef.current) {
       return;
     }
 
     const tl = gsap.timeline({
       onComplete: () => {
-        setTimeout(onComplete, 300);
+        setTimeout(() => safeComplete(), 300);
       },
     });
 
@@ -101,11 +131,10 @@ export function SuddenDeathIntro({ gameState, onComplete }: TransitionProps) {
     return () => {
       tl.kill();
     };
-  }, [onComplete, shake]);
+  }, [shouldSkip, leftFighter, rightFighter, shake, safeComplete]);
 
-  if (!leftFighter || !rightFighter) {
-    // Not enough finalists, skip transition
-    onComplete();
+  // Early return AFTER hooks, just render nothing if skipping
+  if (shouldSkip || !leftFighter || !rightFighter) {
     return null;
   }
 

@@ -180,7 +180,14 @@ export class AnimationSequencer {
     const timeout = waitFor.timeout || 30000; // 30s default
     const startTime = Date.now();
 
-    console.log(`[AnimationSequencer] Waiting for condition (timeout: ${timeout}ms)`);
+    // Get current game state (use getter if available, fallback to snapshot)
+    const getCurrentGameState = () =>
+      context.getGameState ? context.getGameState() : context.gameState;
+
+    const currentGameState = getCurrentGameState();
+    console.log(
+      `[AnimationSequencer] Waiting for condition (timeout: ${timeout}ms), current roundStatus: ${currentGameState.roundStatus}`
+    );
 
     return new Promise((resolve, reject) => {
       const check = () => {
@@ -190,11 +197,16 @@ export class AnimationSequencer {
           return;
         }
 
-        if (waitFor.gameState && waitFor.gameState(context.gameState)) {
-          console.log("[AnimationSequencer] Condition met, proceeding");
+        const latestGameState = getCurrentGameState();
+        if (waitFor.gameState && waitFor.gameState(latestGameState)) {
+          console.log(
+            `[AnimationSequencer] Condition met (roundStatus: ${latestGameState.roundStatus}), proceeding`
+          );
           resolve();
         } else if (Date.now() - startTime > timeout) {
-          console.error("[AnimationSequencer] Wait condition timeout");
+          console.error(
+            `[AnimationSequencer] Wait condition timeout after ${timeout}ms, roundStatus: ${latestGameState.roundStatus}`
+          );
           reject(new Error("Wait condition timeout"));
         } else {
           setTimeout(check, 100); // Check every 100ms

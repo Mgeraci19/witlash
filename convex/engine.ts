@@ -28,6 +28,30 @@ export const nextBattle = mutation({
             await resolveBattle(ctx, args.gameId, game.currentPromptId, game.currentRound);
         }
 
+        // Generic check: If only 1 fighter remains, game ends immediately
+        const playersAfterBattle = await ctx.db.query("players")
+            .withIndex("by_game", q => q.eq("gameId", args.gameId))
+            .collect();
+        const activeFighters = playersAfterBattle.filter(
+            p => p.role === "FIGHTER" && !p.knockedOut
+        );
+
+        if (activeFighters.length <= 1) {
+            if (activeFighters.length === 1) {
+                console.log(`[GAME] Only 1 fighter remains: ${activeFighters[0].name} wins! Ending game.`);
+            } else {
+                console.log(`[GAME] No fighters remain! Ending game (draw).`);
+            }
+            await ctx.db.patch(args.gameId, {
+                status: "RESULTS",
+                currentPromptId: undefined,
+                roundStatus: undefined
+            });
+            // Cleanup
+            const cleanupDelay = 60 * 60 * 1000; // 1 Hour
+            await ctx.scheduler.runAfter(cleanupDelay, api.admin.deleteGame, { gameId: args.gameId });
+            return;
+        }
 
         // Check for Round 4 Winner (Sudden Death)
         if (game.currentRound === 4) {
@@ -48,22 +72,10 @@ export const nextBattle = mutation({
             }
         }
 
-        // Check for Round 3 Early Exit (Top 2 Teams)
-        if (game.currentRound === 3) {
-            const activePlayers = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", args.gameId)).collect();
-            const survivorCount = activePlayers.filter((p) => !p.knockedOut).length;
-
-            if (survivorCount <= 2) {
-                console.log(`[GAME] Round 3 Early Exit: Only ${survivorCount} participants remain.`);
-                await ctx.db.patch(args.gameId, {
-                    status: "ROUND_RESULTS",
-                    currentPromptId: undefined,
-                    roundStatus: undefined
-                });
-                // Cleanup prompts now or let nextRound do it
-                return;
-            }
-        }
+        // NOTE: Removed Round 3 early exit check here (G2 fix).
+        // The round should complete all remaining prompts first.
+        // Prompts with KO'd players are already skipped by the logic below (lines 93+).
+        // The ≤1 fighter check above handles the "only 1 survivor" case.
 
         // Move to NEXT prompt
         const allPrompts = await ctx.db.query("prompts").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();

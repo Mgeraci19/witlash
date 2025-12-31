@@ -17,7 +17,7 @@ export function HostGameResultsView({ game }: HostGameResultsViewProps) {
 
     // Sort fighters by HP to get winner
     const fighters = game.players
-        .filter(p => p.role === "PLAYER")
+        .filter(p => p.role === "FIGHTER")
         .sort((a, b) => (b.hp || 0) - (a.hp || 0));
 
     const winner = fighters[0];

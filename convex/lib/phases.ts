@@ -4,6 +4,30 @@ import { PROMPTS } from "./constants";
 import { api } from "../_generated/api";
 import { PromptManager } from "./promptUtils";
 
+/**
+ * Guard function to verify players are valid for pairing
+ * Throws an error if either player is KO'd or not a FIGHTER role
+ * Note: Valid roles are "FIGHTER" and "CORNER_MAN" per schema
+ */
+function assertValidPairing(p1: Doc<"players">, p2: Doc<"players">) {
+    if (p1.knockedOut) {
+        console.error(`[PAIRING ERROR] Player ${p1.name} (${p1._id}) is KO'd but being paired!`);
+        throw new Error(`Cannot pair KO'd player: ${p1.name}`);
+    }
+    if (p2.knockedOut) {
+        console.error(`[PAIRING ERROR] Player ${p2.name} (${p2._id}) is KO'd but being paired!`);
+        throw new Error(`Cannot pair KO'd player: ${p2.name}`);
+    }
+    if (p1.role !== "FIGHTER" && p1.role !== "PLAYER") {
+        console.error(`[PAIRING ERROR] Player ${p1.name} (${p1._id}) has role ${p1.role}, not FIGHTER!`);
+        throw new Error(`Cannot pair non-FIGHTER role: ${p1.name} (${p1.role})`);
+    }
+    if (p2.role !== "FIGHTER" && p2.role !== "PLAYER") {
+        console.error(`[PAIRING ERROR] Player ${p2.name} (${p2._id}) has role ${p2.role}, not FIGHTER!`);
+        throw new Error(`Cannot pair non-FIGHTER role: ${p2.name} (${p2.role})`);
+    }
+}
+
 export async function setupPhase1(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 1 (Series Matchups) for ${players.length} players`);
 
@@ -66,15 +90,29 @@ export function hasHumanCornerMan(captainId: Id<"players">, allPlayers: Doc<"pla
 
 export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 2 (The Cull) for ${players.length} players`);
+    console.log(`[GAME] All players status:`, players.map(p => ({
+        name: p.name,
+        role: p.role,
+        knockedOut: p.knockedOut,
+        hp: p.hp,
+        teamId: p.teamId
+    })));
 
     // 1. Identify Captains (Players who own a Corner Man)
     // These players get a BYE for this round.
     const cornerMen = players.filter(p => p.role === "CORNER_MAN" && p.teamId);
     const captainIds = new Set(cornerMen.map(p => p.teamId));
+    console.log(`[GAME] Captains (players with corner men):`, [...captainIds]);
 
-    // 2. Filter Survivors for Matchmaking (Not KO'd AND Not a Captain)
-    const survivors = players.filter(p => !p.knockedOut && !captainIds.has(p._id));
+    // 2. Filter Survivors for Matchmaking (Not KO'd AND Not a Captain AND role is FIGHTER)
+    // Also check role === "FIGHTER" to be extra safe (CORNER_MAN should not be paired)
+    const survivors = players.filter(p =>
+        p.role === "FIGHTER" &&
+        !p.knockedOut &&
+        !captainIds.has(p._id)
+    );
     console.log(`[GAME] Survivors for Pairing: ${survivors.length} (Captains skipped: ${captainIds.size})`);
+    console.log(`[GAME] Survivor names:`, survivors.map(p => p.name));
 
     // if (survivors.length < 2) { ... handle in nextRound ... }
 
@@ -100,6 +138,10 @@ export async function setupPhase2(ctx: MutationCtx, gameId: Id<"games">, players
 
         const p1 = survivors[i];
         const p2 = survivors[i + 1];
+
+        // Guard: Verify neither player is KO'd or wrong role
+        assertValidPairing(p1, p2);
+
         console.log(`[GAME] Pairing ${p1.name} (${p1.hp}) vs ${p2.name} (${p2.hp})`);
 
         // Store pairing for transition display
@@ -130,13 +172,17 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
     console.log(`[GAME] Resolving Phase 2 (Executions)`);
     // "One Must Fall" Logic: Active players who fought and have lower HP than opponent die.
 
+    // Track who gets executed for transition display
+    const executedPlayerIds: Id<"players">[] = [];
+
     // We can infer pairings from the Prompts, or just sort survivors again.
     // simpler: Get all players. Any who was NOT knockedOut before R2 but is now effectively "Loser" needs processing.
     // Wait, the rule is "If after 3 fights, both > 0 HP, Lower One is executed".
     // If someone was KO'd by damage mid-round, they are already KO'd.
 
     const players = await ctx.db.query("players").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();
-    const survivors = players.filter((p) => !p.knockedOut);
+    // Only consider FIGHTER role (not CORNER_MAN) and not KO'd
+    const survivors = players.filter((p) => p.role === "FIGHTER" && !p.knockedOut);
 
     // We need to re-identify the Pairs to compare them.
     // We can look at prompts from Round 2.
@@ -174,18 +220,22 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
                 if (pHP < oHP) {
                     // P Dies.
                     console.log(`[CULL] Executing ${p.name} (${pHP} HP) vs ${opponent.name} (${oHP} HP)`);
-                    await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id });
+                    await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id, becameCornerManInRound: 2 });
+                    executedPlayerIds.push(p._id);
                 } else if (oHP < pHP) {
                     // Opponent Dies.
                     console.log(`[CULL] Executing ${opponent.name} (${oHP} HP) vs ${p.name} (${pHP} HP)`);
-                    await ctx.db.patch(opponent._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: p._id });
+                    await ctx.db.patch(opponent._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: p._id, becameCornerManInRound: 2 });
+                    executedPlayerIds.push(opponent._id);
                 } else {
                     // Tie? Coin flip or Sudden Death?
                     // For MVP, random kill.
                     if (Math.random() > 0.5) {
-                        await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id });
+                        await ctx.db.patch(p._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: opponent._id, becameCornerManInRound: 2 });
+                        executedPlayerIds.push(p._id);
                     } else {
-                        await ctx.db.patch(opponent._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: p._id });
+                        await ctx.db.patch(opponent._id, { knockedOut: true, hp: 0, role: "CORNER_MAN", teamId: p._id, becameCornerManInRound: 2 });
+                        executedPlayerIds.push(opponent._id);
                     }
                 }
             }
@@ -195,17 +245,27 @@ export async function resolvePhase2(ctx: MutationCtx, gameId: Id<"games">) {
             // Bye case? They survived.
         }
     }
+
+    // Store executed player IDs for transition display
+    if (executedPlayerIds.length > 0) {
+        await ctx.db.patch(gameId, { round2ExecutedPlayerIds: executedPlayerIds });
+        console.log(`[GAME] Stored ${executedPlayerIds.length} executed player IDs for transition`);
+    }
 }
 
 export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 3: The Gauntlet`);
+    console.log(`[GAME] All players:`, players.map(p => ({ name: p.name, role: p.role, knockedOut: p.knockedOut, hp: p.hp })));
 
     // Active Teams = Players who are NOT Knocked Out AND are actual fighters (not corner men)
     // Corner men should NOT receive prompts - they can only send suggestions
-    const activeFighters = players.filter((p) => p.role === "PLAYER" && !p.knockedOut);
+    const activeFighters = players.filter((p) => p.role === "FIGHTER" && !p.knockedOut);
     console.log(`[GAME] Active Fighters for Gauntlet: ${activeFighters.length}`);
+    console.log(`[GAME] Active Fighter names:`, activeFighters.map(p => p.name));
 
     if (activeFighters.length < 2) {
+        console.error(`[GAME] ERROR: Phase 3 has fewer than 2 active fighters! Cannot create prompts.`);
+        console.error(`[GAME] This should not happen - game should have ended earlier.`);
         // Should trigger Game Over probably?
         return;
     }
@@ -240,6 +300,9 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
                 p2 = shuffled[1];
             }
 
+            // Guard: Verify neither player is KO'd or wrong role
+            assertValidPairing(p1, p2);
+
             const text = getPrompt();
 
             const promptId = await ctx.db.insert("prompts", { gameId, text, assignedTo: [p1._id, p2._id] });
@@ -261,8 +324,8 @@ export async function setupPhase3(ctx: MutationCtx, gameId: Id<"games">, players
 export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players: Doc<"players">[]) {
     console.log(`[GAME] Setting up Phase 4: The Final Showdown`);
 
-    // 1. Identify the Final 2 Fighters
-    const activeFighters = players.filter((p) => !p.knockedOut);
+    // 1. Identify the Final 2 Fighters (must be FIGHTER role and not KO'd)
+    const activeFighters = players.filter((p) => p.role === "FIGHTER" && !p.knockedOut);
     console.log(`[GAME] Finalists: ${activeFighters.map((p) => p.name).join(", ")}`);
 
     if (activeFighters.length !== 2) {
@@ -284,6 +347,9 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
     const p2 = finalists[1];
 
     if (!p1 || !p2) return; // safety
+
+    // Guard: Verify neither player is KO'd or wrong role
+    assertValidPairing(p1, p2);
 
     // 3. Create Prompts (3 rounds for now, as per MVP plan)
     // "Players in round 4 continually have to answer prompts... First 3 prompts are created as normal."
@@ -313,6 +379,9 @@ export async function setupPhase4(ctx: MutationCtx, gameId: Id<"games">, players
 
 export async function createSuddenDeathPrompt(ctx: MutationCtx, gameId: Id<"games">, p1: Doc<"players">, p2: Doc<"players">, players: Doc<"players">[]) {
     console.log(`[GAME] Creating new Sudden Death prompt, cleaning up old data...`);
+
+    // Guard: Verify neither player is KO'd or wrong role
+    assertValidPairing(p1, p2);
 
     // Clean up ALL old prompts, submissions, votes, AND suggestions from previous Sudden Death rounds
     const oldPrompts = await ctx.db.query("prompts").withIndex("by_game", (q) => q.eq("gameId", gameId)).collect();

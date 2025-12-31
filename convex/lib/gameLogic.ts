@@ -104,7 +104,7 @@ export async function resolveBattle(
                 if (opponentSub && (currentRound === 1 || currentRound === 2)) {
                     const winnerId = opponentSub.playerId;
                     console.log(`[GAME] Round ${currentRound}: ${loser.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
-                    await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0 });
+                    await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0, becameCornerManInRound: currentRound });
                 } else {
                     console.log(`[GAME] Player ${loser.player.name} KO'd in Round ${currentRound}!`);
                     await ctx.db.patch(loser.player._id, { hp: 0, knockedOut: true, winStreak: 0 });
@@ -134,7 +134,7 @@ export async function resolveBattle(
                 if (opponentSub && (currentRound === 1 || currentRound === 2)) {
                     const winnerId = opponentSub.playerId;
                     console.log(`[GAME] Round ${currentRound}: ${knocked.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
-                    await ctx.db.patch(knocked.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0 });
+                    await ctx.db.patch(knocked.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: 0, knockedOut: true, winStreak: 0, becameCornerManInRound: currentRound });
                 } else {
                     console.log(`[GAME] Player ${knocked.player.name} KO'd in Round ${currentRound}!`);
                     await ctx.db.patch(knocked.player._id, { hp: 0, knockedOut: true, winStreak: 0 });
@@ -200,11 +200,11 @@ export async function resolveBattle(
 
                     if (existingCornerMen.length >= 1) {
                         console.warn(`[GAME] WARNING: ${loser.player.name} lost to ${winnerId} who already has ${existingCornerMen.length} corner men! This violates bye logic. Assigning anyway as second corner man.`);
-                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0 });
+                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0, becameCornerManInRound: currentRound });
                         console.log(`[CORNER MAN ASSIGNED] ${loser.player.name} (ID: ${loser.player._id}) → Supporting ${winnerId}`);
                     } else {
                         console.log(`[GAME] Round ${currentRound}: ${loser.player.name} KO'd! Assigning as Corner Man for ${winnerId}`);
-                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0 });
+                        await ctx.db.patch(loser.player._id, { role: "CORNER_MAN", teamId: winnerId, hp: newHp, knockedOut, winStreak: 0, becameCornerManInRound: currentRound });
                         console.log(`[CORNER MAN ASSIGNED] ${loser.player.name} (ID: ${loser.player._id}) → Supporting ${winnerId}`);
                     }
                 } else {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "../animations/gsapConfig";
 import { AvatarFighter } from "../AvatarFighter";
 import { TransitionProps } from "./types";
@@ -15,6 +15,23 @@ export function PairingReveal({ gameState, onComplete }: TransitionProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const pairingsContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldSkip, setShouldSkip] = useState(false);
+  const completedRef = useRef(false);
+
+  // Stable reference to onComplete
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Safe completion handler
+  const safeComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onCompleteRef.current();
+      });
+    });
+  }, []);
 
   // Get pairings from Round 2 snapshot
   const pairings = gameState.round2Pairings || [];
@@ -24,30 +41,43 @@ export function PairingReveal({ gameState, onComplete }: TransitionProps) {
     const fighter1 = gameState.players?.find((p) => p._id === pairing.fighter1Id);
     const fighter2 = gameState.players?.find((p) => p._id === pairing.fighter2Id);
 
-    // Check if either has corner men (is a captain)
-    const fighter1HasCornerMan = gameState.players?.some(
+    // Get corner men for each fighter (the actual corner man objects)
+    const fighter1CornerMen = gameState.players?.filter(
       (p) => p.role === "CORNER_MAN" && p.teamId === pairing.fighter1Id
-    );
-    const fighter2HasCornerMan = gameState.players?.some(
+    ) || [];
+    const fighter2CornerMen = gameState.players?.filter(
       (p) => p.role === "CORNER_MAN" && p.teamId === pairing.fighter2Id
-    );
+    ) || [];
 
     return {
       fighter1: fighter1!,
       fighter2: fighter2!,
-      fighter1HasCornerMan,
-      fighter2HasCornerMan,
+      fighter1CornerMen,
+      fighter2CornerMen,
     };
   }).filter((p) => p.fighter1 && p.fighter2); // Only valid pairings
 
+  // Handle skip case in useEffect to avoid setState during render
   useEffect(() => {
+    if (pairingData.length === 0 && !completedRef.current) {
+      setShouldSkip(true);
+      safeComplete();
+    }
+  }, [pairingData.length, safeComplete]);
+
+  useEffect(() => {
+    // Don't run animation if we're skipping or already completed
+    if (shouldSkip || pairingData.length === 0 || completedRef.current) {
+      return;
+    }
+
     if (!overlayRef.current || !titleRef.current || !pairingsContainerRef.current) {
       return;
     }
 
     const tl = gsap.timeline({
       onComplete: () => {
-        setTimeout(onComplete, 300);
+        setTimeout(() => safeComplete(), 300);
       },
     });
 
@@ -88,11 +118,10 @@ export function PairingReveal({ gameState, onComplete }: TransitionProps) {
     return () => {
       tl.kill();
     };
-  }, [onComplete]);
+  }, [shouldSkip, pairingData.length, safeComplete]);
 
-  if (pairingData.length === 0) {
-    // No pairings, skip transition
-    onComplete();
+  // Early return AFTER hooks, just render nothing if skipping
+  if (shouldSkip || pairingData.length === 0) {
     return null;
   }
 
@@ -124,10 +153,26 @@ export function PairingReveal({ gameState, onComplete }: TransitionProps) {
               key={idx}
               className="flex items-center justify-between bg-gray-900/50 rounded-2xl p-6 border-2 border-red-500/30"
             >
-              {/* Fighter 1 */}
+              {/* Fighter 1 with Corner Men behind */}
               <div className="flex flex-col items-center flex-1">
                 <div className="relative">
-                  {pairing.fighter1HasCornerMan && (
+                  {/* Corner Men behind captain (stacked smaller) */}
+                  {pairing.fighter1CornerMen.length > 0 && (
+                    <div className="absolute -left-6 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-0">
+                      {pairing.fighter1CornerMen.map((cm) => (
+                        <div key={cm._id} className="opacity-70 scale-75">
+                          <AvatarFighter
+                            name={cm.name}
+                            avatar={cm.avatar}
+                            side="left"
+                            state="idle"
+                            size="small"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pairing.fighter1CornerMen.length > 0 && (
                     <div className="absolute -top-3 -right-3 z-10 bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-xs">
                       CAPTAIN
                     </div>
@@ -163,10 +208,26 @@ export function PairingReveal({ gameState, onComplete }: TransitionProps) {
                 VS
               </div>
 
-              {/* Fighter 2 */}
+              {/* Fighter 2 with Corner Men behind */}
               <div className="flex flex-col items-center flex-1">
                 <div className="relative">
-                  {pairing.fighter2HasCornerMan && (
+                  {/* Corner Men behind captain (stacked smaller on right side) */}
+                  {pairing.fighter2CornerMen.length > 0 && (
+                    <div className="absolute -right-6 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-0">
+                      {pairing.fighter2CornerMen.map((cm) => (
+                        <div key={cm._id} className="opacity-70 scale-75">
+                          <AvatarFighter
+                            name={cm.name}
+                            avatar={cm.avatar}
+                            side="right"
+                            state="idle"
+                            size="small"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {pairing.fighter2CornerMen.length > 0 && (
                     <div className="absolute -top-3 -left-3 z-10 bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-xs">
                       CAPTAIN
                     </div>

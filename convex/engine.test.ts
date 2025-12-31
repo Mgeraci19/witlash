@@ -537,3 +537,195 @@ describe("engine.nextRound", () => {
     }
   });
 });
+
+describe("Pairing exclusion - Bug 10", () => {
+  test("KO'd players are excluded from Phase 2 pairing", async () => {
+    const t = convexTest(schema);
+
+    // Create a game ready for Phase 2
+    const gameId = await t.run(async (ctx) => {
+      return await ctx.db.insert("games", {
+        roomCode: "TEST",
+        status: "ROUND_RESULTS",
+        currentRound: 1,
+        maxRounds: 4,
+      });
+    });
+
+    // Create VIP player (active)
+    const vipId = await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: "VIP",
+        score: 0,
+        isVip: true,
+        sessionToken: "vip-token",
+        hp: 80,
+        maxHp: 100,
+        knockedOut: false,
+        role: "FIGHTER",
+        isBot: false,
+      });
+    });
+
+    // Create active player
+    const activePlayerId = await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: "ActivePlayer",
+        score: 0,
+        isVip: false,
+        sessionToken: "active-token",
+        hp: 70,
+        maxHp: 100,
+        knockedOut: false,
+        role: "FIGHTER",
+        isBot: false,
+      });
+    });
+
+    // Create KO'd player - should NOT be paired
+    const koPlayerName = "KO'd_Player";
+    await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: koPlayerName,
+        score: 0,
+        isVip: false,
+        sessionToken: "ko-token",
+        hp: 0,
+        maxHp: 100,
+        knockedOut: true, // KO'd
+        role: "CORNER_MAN", // After KO, role changes to CORNER_MAN
+        teamId: vipId, // Assigned to VIP
+        isBot: false,
+      });
+    });
+
+    // Add more active players to have enough for pairing
+    for (let i = 0; i < 3; i++) {
+      await t.run(async (ctx) => {
+        await ctx.db.insert("players", {
+          gameId,
+          name: `ActiveBot${i}`,
+          score: 0,
+          isVip: false,
+          sessionToken: `activebot${i}`,
+          hp: 60 + i * 10,
+          maxHp: 100,
+          knockedOut: false,
+          role: "FIGHTER",
+          isBot: true,
+        });
+      });
+    }
+
+    // Advance to Round 2
+    await t.mutation(api.engine.nextRound, {
+      gameId,
+      playerId: vipId,
+      sessionToken: "vip-token",
+    });
+
+    // Check that prompts were created only for active players
+    const prompts = await t.run(async (ctx) =>
+      ctx.db.query("prompts").withIndex("by_game", q => q.eq("gameId", gameId)).collect()
+    );
+
+    // Verify no prompt contains the KO'd player
+    for (const prompt of prompts) {
+      expect(prompt.assignedTo).toBeDefined();
+      for (const playerId of prompt.assignedTo!) {
+        const player = await t.run(async (ctx) => ctx.db.get(playerId));
+        expect(player!.knockedOut).toBe(false);
+        expect(player!.role).toBe("FIGHTER");
+        expect(player!.name).not.toBe(koPlayerName);
+      }
+    }
+  });
+
+  test("CORNER_MAN role players are excluded from pairing", async () => {
+    const t = convexTest(schema);
+
+    // Create a game ready for Phase 3
+    const gameId = await t.run(async (ctx) => {
+      return await ctx.db.insert("games", {
+        roomCode: "TEST",
+        status: "ROUND_RESULTS",
+        currentRound: 2,
+        maxRounds: 4,
+      });
+    });
+
+    // Create VIP player (active fighter)
+    const vipId = await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: "VIP",
+        score: 0,
+        isVip: true,
+        sessionToken: "vip-token",
+        hp: 80,
+        maxHp: 100,
+        knockedOut: false,
+        role: "FIGHTER",
+        isBot: false,
+      });
+    });
+
+    // Create corner man - should NOT be paired
+    const cornerManName = "CornerMan";
+    await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: cornerManName,
+        score: 0,
+        isVip: false,
+        sessionToken: "corner-token",
+        hp: 0,
+        maxHp: 100,
+        knockedOut: true,
+        role: "CORNER_MAN",
+        teamId: vipId,
+        isBot: false,
+      });
+    });
+
+    // Add another active fighter
+    await t.run(async (ctx) => {
+      return await ctx.db.insert("players", {
+        gameId,
+        name: "OtherFighter",
+        score: 0,
+        isVip: false,
+        sessionToken: "other-token",
+        hp: 60,
+        maxHp: 100,
+        knockedOut: false,
+        role: "FIGHTER",
+        isBot: false,
+      });
+    });
+
+    // Advance to Round 3 (Gauntlet)
+    await t.mutation(api.engine.nextRound, {
+      gameId,
+      playerId: vipId,
+      sessionToken: "vip-token",
+    });
+
+    // Check prompts - corner man should not be in any
+    const prompts = await t.run(async (ctx) =>
+      ctx.db.query("prompts").withIndex("by_game", q => q.eq("gameId", gameId)).collect()
+    );
+
+    for (const prompt of prompts) {
+      expect(prompt.assignedTo).toBeDefined();
+      for (const playerId of prompt.assignedTo!) {
+        const player = await t.run(async (ctx) => ctx.db.get(playerId));
+        expect(player!.role).toBe("FIGHTER");
+        expect(player!.name).not.toBe(cornerManName);
+      }
+    }
+  });
+});

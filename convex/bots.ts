@@ -11,13 +11,27 @@ export const autoAnswer = mutation({
     },
     handler: async (ctx, args) => {
         const player = await ctx.db.get(args.playerId);
-        if (!player) return;
+        if (!player) {
+            console.log(`[BOTS] autoAnswer: Player not found ${args.playerId}`);
+            return;
+        }
 
         // Double check Human Corner Man status (in case it changed, though unlikely in ms)
         // We need all players to check team linkage
         const allPlayers = await ctx.db.query("players").withIndex("by_game", q => q.eq("gameId", args.gameId)).collect();
+
+        // Log corner men for this bot for debugging
+        const cornerMenForThisBot = allPlayers.filter(p => p.role === "CORNER_MAN" && p.teamId === player._id);
+        const humanCornerMen = cornerMenForThisBot.filter(p => !p.isBot);
+
+        console.log(`[BOTS] autoAnswer check for ${player.name}:`, {
+            totalCornerMen: cornerMenForThisBot.length,
+            humanCornerMen: humanCornerMen.length,
+            cornerMenNames: cornerMenForThisBot.map(p => ({ name: p.name, isBot: p.isBot }))
+        });
+
         if (hasHumanCornerMan(player._id, allPlayers)) {
-            console.log(`[BOTS] Skipping auto-answer for ${player.name} (Has Human Corner Man)`);
+            console.log(`[BOTS] Skipping auto-answer for ${player.name} (Has Human Corner Man: ${humanCornerMen.map(p => p.name).join(', ')})`);
             return;
         }
 

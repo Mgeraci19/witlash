@@ -18,6 +18,8 @@ interface AvatarFighterProps {
   isWinner?: boolean;
   /** Whether this fighter is knocked out */
   isKO?: boolean;
+  /** Current win streak (shows warning at 2) */
+  winStreak?: number;
   /** Size variant */
   size?: "small" | "medium" | "large";
   /** Additional CSS classes */
@@ -43,6 +45,7 @@ export const AvatarFighter = forwardRef<HTMLDivElement, AvatarFighterProps>(
       state = "idle",
       isWinner = false,
       isKO = false,
+      winStreak = 0,
       size = "large",
       className = "",
     },
@@ -180,6 +183,22 @@ export const AvatarFighter = forwardRef<HTMLDivElement, AvatarFighterProps>(
             </div>
           )}
         </div>
+
+        {/* 2-Win Streak Warning Badge - Shows when next win = FINISHER */}
+        {winStreak === 2 && !isKO && (
+          <div
+            className="absolute -top-4 left-1/2 -translate-x-1/2 z-20
+              bg-gradient-to-r from-orange-500 to-yellow-500 text-white
+              px-3 py-1 rounded-full text-xs md:text-sm font-bold
+              animate-pulse shadow-lg whitespace-nowrap"
+            style={{
+              textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+              boxShadow: "0 0 15px rgba(255,165,0,0.6)",
+            }}
+          >
+            🔥 NEXT WIN = FINISHER!
+          </div>
+        )}
       </div>
     );
   }

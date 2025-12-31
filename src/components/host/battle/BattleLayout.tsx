@@ -69,6 +69,7 @@ export function BattleLayout({
               side="left"
               state={leftFighterState}
               isWinner={showWinner && leftBattler.isWinner}
+              winStreak={leftBattler.winStreak}
               size="large"
             />
           </div>
@@ -79,6 +80,7 @@ export function BattleLayout({
               side="right"
               state={rightFighterState}
               isWinner={showWinner && rightBattler.isWinner}
+              winStreak={rightBattler.winStreak}
               size="large"
             />
           </div>
@@ -123,8 +125,7 @@ export function BattleLayout({
                   <div className={`text-center mt-3 text-xl md:text-2xl font-bold ${
                     showWinner && firstAnswer.isWinner ? "text-yellow-400" : "text-gray-300"
                   }`}>
-                    {answerOrder.first === "left" ? displayedVotes.left : displayedVotes.right} vote
-                    {(answerOrder.first === "left" ? displayedVotes.left : displayedVotes.right) === 1 ? "" : "s"}
+                    {firstAnswer.voteCount} vote{firstAnswer.voteCount === 1 ? "" : "s"}
                   </div>
                   {firstAnswer.voters && firstAnswer.voters.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-3">
@@ -142,13 +143,14 @@ export function BattleLayout({
               )}
             </div>
 
-            {/* VS Badge */}
+            {/* VS Badge - higher z-index to stay on top of answers during animations */}
             <div
               ref={refs.vsBadge}
-              className="text-5xl font-bold text-red-500 my-3"
+              className="text-5xl font-bold text-red-500 my-3 relative"
               style={{
                 textShadow: "0 0 20px rgba(255,0,0,0.5)",
                 fontFamily: "'Impact', 'Arial Black', sans-serif",
+                zIndex: 10,
               }}
             >
               VS
@@ -187,8 +189,7 @@ export function BattleLayout({
                   <div className={`text-center mt-3 text-xl md:text-2xl font-bold ${
                     showWinner && secondAnswer.isWinner ? "text-yellow-400" : "text-gray-300"
                   }`}>
-                    {answerOrder.second === "left" ? displayedVotes.left : displayedVotes.right} vote
-                    {(answerOrder.second === "left" ? displayedVotes.left : displayedVotes.right) === 1 ? "" : "s"}
+                    {secondAnswer.voteCount} vote{secondAnswer.voteCount === 1 ? "" : "s"}
                   </div>
                   {secondAnswer.voters && secondAnswer.voters.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-3">
@@ -215,18 +216,72 @@ export function BattleLayout({
           </div>
         </div>
 
-        {/* Tie Message */}
+        {/* Message Overlay (K.O., FINISHER!, Combo, Tie, etc.) */}
         {tieMessage && (
-          <div
-            className="absolute bottom-20 left-0 right-0 text-center text-3xl font-bold text-yellow-400 animate-pulse"
-            style={{
-              textShadow: "0 0 20px rgba(250,204,21,0.5)",
-              fontFamily: "'Impact', 'Arial Black', sans-serif",
-              zIndex: 30,
-            }}
-          >
-            {tieMessage}
-          </div>
+          tieMessage === "K.O." ? (
+            // BIG dramatic K.O. display
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black/60"
+              style={{ zIndex: 50 }}
+            >
+              <div
+                className="text-[12rem] md:text-[16rem] font-black text-red-500 animate-pulse"
+                style={{
+                  textShadow: "0 0 60px rgba(239,68,68,0.9), 0 0 120px rgba(239,68,68,0.6), 0 0 180px rgba(239,68,68,0.3)",
+                  fontFamily: "'Impact', 'Arial Black', sans-serif",
+                  letterSpacing: "0.1em",
+                  WebkitTextStroke: "4px #991b1b",
+                }}
+              >
+                K.O.
+              </div>
+            </div>
+          ) : tieMessage === "FINISHER!" ? (
+            // DRAMATIC GOLDEN FINISHER display
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black/70"
+              style={{ zIndex: 50 }}
+            >
+              <div className="relative">
+                {/* Glow effect behind text */}
+                <div
+                  className="absolute inset-0 blur-xl"
+                  style={{
+                    background: "radial-gradient(ellipse at center, rgba(255,215,0,0.6) 0%, rgba(255,165,0,0.3) 50%, transparent 70%)",
+                  }}
+                />
+                <div
+                  className="text-[10rem] md:text-[14rem] font-black animate-pulse relative"
+                  style={{
+                    color: "#FFD700", // Gold
+                    textShadow: `
+                      0 0 40px rgba(255,215,0,1),
+                      0 0 80px rgba(255,165,0,0.8),
+                      0 0 120px rgba(255,140,0,0.6),
+                      0 0 200px rgba(255,100,0,0.4)
+                    `,
+                    fontFamily: "'Impact', 'Arial Black', sans-serif",
+                    letterSpacing: "0.05em",
+                    WebkitTextStroke: "3px #B8860B", // DarkGoldenrod stroke
+                  }}
+                >
+                  FINISHER!
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Regular message (combo, tie, etc.)
+            <div
+              className="absolute bottom-20 left-0 right-0 text-center text-3xl font-bold text-yellow-400 animate-pulse"
+              style={{
+                textShadow: "0 0 20px rgba(250,204,21,0.5)",
+                fontFamily: "'Impact', 'Arial Black', sans-serif",
+                zIndex: 30,
+              }}
+            >
+              {tieMessage}
+            </div>
+          )
         )}
       </div>
     </div>

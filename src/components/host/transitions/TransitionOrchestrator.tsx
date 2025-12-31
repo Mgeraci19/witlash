@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { GameState } from "@/lib/types";
 import { transitionRegistry } from "./transitionRegistry";
 import { TransitionDefinition } from "./types";
@@ -21,6 +21,14 @@ interface TransitionOrchestratorProps {
 export function TransitionOrchestrator({ gameState }: TransitionOrchestratorProps) {
   const previousStateRef = useRef<GameState | null>(null);
   const [activeTransition, setActiveTransition] = useState<TransitionDefinition | null>(null);
+  const completedRef = useRef(false);
+
+  // Reset completed flag when a new transition activates
+  useEffect(() => {
+    if (activeTransition) {
+      completedRef.current = false;
+    }
+  }, [activeTransition]);
 
   // Detect state changes and trigger matching transitions
   useEffect(() => {
@@ -46,13 +54,25 @@ export function TransitionOrchestrator({ gameState }: TransitionOrchestratorProp
     previousStateRef.current = currentState;
   }, [gameState, activeTransition]);
 
-  // Handle transition completion
-  const handleTransitionComplete = () => {
-    console.log(
-      `[TransitionOrchestrator] Transition complete: ${activeTransition?.id}`
-    );
-    setActiveTransition(null);
-  };
+  // Handle transition completion - uses requestAnimationFrame to safely defer state update
+  const handleTransitionComplete = useCallback(() => {
+    // Guard against double-completion
+    if (completedRef.current) {
+      console.log(`[TransitionOrchestrator] Ignoring duplicate completion`);
+      return;
+    }
+    completedRef.current = true;
+
+    console.log(`[TransitionOrchestrator] Transition complete requested`);
+
+    // Use double requestAnimationFrame to ensure we're fully out of React's render cycle
+    // This prevents "Cannot update a component while rendering a different component" errors
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setActiveTransition(null);
+      });
+    });
+  }, []);
 
   // Render active transition
   if (activeTransition) {

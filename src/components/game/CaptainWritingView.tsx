@@ -3,6 +3,7 @@ import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { GameState } from "@/lib/types";
 import { SuggestionCard } from "./cards/SuggestionCard";
+import { getPendingPromptsForPlayer } from "@/lib/promptUtils";
 
 interface CaptainWritingViewProps {
     game: GameState;
@@ -21,9 +22,14 @@ export function CaptainWritingView({ game, playerId, sessionToken, myTeamId, sub
     const captain = game.players.find((p) => p._id === myTeamId);
     const captainIsBot = captain?.isBot;
 
-    // Find prompts assigned to my Captain (teamId)
-    const captainPrompts = game.prompts?.filter((p) => p.assignedTo?.includes(myTeamId)) || [];
-    const pendingCaptainPrompts = captainPrompts.filter((p) => !game.submissions?.some((s) => s.promptId === p._id && s.playerId === myTeamId));
+    // Use utility function to get prompts based on corner man role
+    const captainPrompts = getPendingPromptsForPlayer(
+        game.prompts,
+        game.submissions,
+        playerId!,
+        game.players
+    );
+    const pendingCaptainPrompts = captainPrompts; // Already filtered by utility
 
     return (
         <div

@@ -70,7 +70,7 @@ export function FighterHealthBar({ name, hp, maxHp, side, isWinner, showDamage, 
     return (
         <div className={`flex-1 ${side === "right" ? "text-right" : "text-left"}`}>
             {/* Avatar + Name Row */}
-            <div className={`flex items-center gap-3 mb-2 ${side === "right" ? "flex-row-reverse" : ""}`}>
+            <div className={`flex items-center gap-3 mb-1 ${side === "right" ? "flex-row-reverse" : ""}`}>
                 {/* Avatar */}
                 {avatar ? (
                     <img
@@ -88,18 +88,22 @@ export function FighterHealthBar({ name, hp, maxHp, side, isWinner, showDamage, 
                 <div className={`text-2xl font-bold ${isWinner ? "text-yellow-400" : "text-white"}`}>
                     {name}
                 </div>
+            </div>
 
-                {/* Combo Indicator */}
-                {(winStreak ?? 0) >= 1 && (
+            {/* Combo Indicator - Separate row below name */}
+            {(winStreak ?? 0) >= 1 && (
+                <div className={`flex mb-2 ${side === "right" ? "justify-end" : "justify-start"}`}>
                     <div className={`px-3 py-1 rounded-full font-bold text-sm ${
                         winStreak && winStreak >= 2
                             ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-white animate-pulse"
                             : "bg-blue-500 text-white"
                     }`}>
-                        {winStreak && winStreak >= 2 ? "🔥 COMBO x3 - INSTANT KO!" : "⚡ COMBO x2 - BONUS DMG"}
+                        {winStreak && winStreak >= 2
+                            ? `🔥 ${winStreak + 1} WIN STREAK - INSTANT KO!`
+                            : `⚡ ${(winStreak ?? 0) + 1} WIN STREAK`}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* HP Bar Container */}
             <div className={`relative h-6 bg-gray-800 rounded ${side === "right" ? "ml-auto" : "mr-auto"}`} style={{ maxWidth: "300px" }}>

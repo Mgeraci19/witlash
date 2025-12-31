@@ -1,4 +1,4 @@
-import { BattleSide } from "../animations/registry/types";
+import { BattleSide } from "../animations/core/types";
 import { FighterState } from "../AvatarFighter";
 
 export interface BattlerInfo {

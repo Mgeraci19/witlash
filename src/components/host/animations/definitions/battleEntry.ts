@@ -1,6 +1,7 @@
 import { gsap } from "../../animations/gsapConfig";
 import type { AnimationDefinition } from "../core/types";
 import { animationRegistry } from "../core/AnimationRegistry";
+import { TIMINGS } from "../config";
 
 /**
  * battleEntryAnimation - The SACRED battle entry sequence
@@ -27,10 +28,10 @@ export const battleEntryAnimation: AnimationDefinition = {
   id: "battle-entry",
   name: "Battle Entry Sequence",
   category: "battle",
-  duration: 7.4, // SACRED - matches useEntrySequence.ts exactly
+  duration: TIMINGS.entrySequence,
   canRunInParallel: false,
   priority: 10,
-  tags: ["battle", "entry", "sacred-timing"],
+  tags: ["battle", "entry"],
 
   create: (context) => {
     const timeline = gsap.timeline({
@@ -50,49 +51,53 @@ export const battleEntryAnimation: AnimationDefinition = {
       return timeline;
     }
 
-    // Phase 1: Question (0.5s + 3s pause = 3.5s total)
+    // FADE IN VS badge at start of battle
+    timeline.fromTo(
+      context.refs.vsBadge.current,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.2 },
+      0 // At start of timeline
+    );
+
+    // Phase 1: Question (TESTING: 0.3s + 0.2s pause)
+    // Use fromTo to ensure consistent starting position (fixes positioning bugs)
     context.setPhase?.("question");
-    timeline.to(context.refs.question.current, {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      visibility: "visible", // Make visible for animation
-      duration: 0.5, // SACRED
-      ease: "back.out(1.5)", // SACRED
-    });
+    timeline.fromTo(
+      context.refs.question.current,
+      { opacity: 0, scale: 0.9, y: -20, visibility: "visible" },
+      { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: "back.out(1.5)" }
+    );
 
     // Hold for reading the question
-    timeline.to({}, { duration: 3 }); // SACRED
+    timeline.to({}, { duration: TIMINGS.questionPause });
 
-    // Phase 2: Avatars (0.3s pause)
+    // Phase 2: Avatars push phase
     timeline.call(() => context.setPhase?.("avatars_push"));
-    timeline.to({}, { duration: 0.3 }); // SACRED
+    timeline.to({}, { duration: 0.1 });
 
-    // Phase 3: Slam 1 (0.3s + 2.5s pause = 2.8s total)
+    // Phase 3: Slam 1 - first answer slams in
+    // Use fromTo for consistent starting position
     timeline.call(() => context.setPhase?.("slam1"));
-    timeline.to(context.refs.answer1.current, {
-      opacity: 1,
-      scale: 1,
-      visibility: "visible",
-      duration: 0.3, // SACRED
-      ease: "back.out(2)", // SACRED
-    });
+    timeline.fromTo(
+      context.refs.answer1.current,
+      { opacity: 0, scale: 0.8, visibility: "visible" },
+      { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }
+    );
 
-    // Pause for reading
-    timeline.to({}, { duration: 2.5 }); // SACRED
+    // Pause for reading the answer
+    timeline.to({}, { duration: TIMINGS.answerReadPause });
 
-    // Phase 4: Slam 2 (0.3s animation)
+    // Phase 4: Slam 2 - second answer slams in
+    // Use fromTo for consistent starting position
     timeline.call(() => context.setPhase?.("slam2"));
-    timeline.to(context.refs.answer2.current, {
-      opacity: 1,
-      scale: 1,
-      visibility: "visible",
-      duration: 0.3, // SACRED
-      ease: "back.out(2)", // SACRED
-    });
+    timeline.fromTo(
+      context.refs.answer2.current,
+      { opacity: 0, scale: 0.8, visibility: "visible" },
+      { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }
+    );
 
-    // Move to voting phase (0.5s delay)
-    timeline.call(() => context.setPhase?.("voting"), [], "+=0.5"); // SACRED
+    // Move to voting phase
+    timeline.call(() => context.setPhase?.("voting"), [], `+=${TIMINGS.answerReadPause}`);
 
     return timeline;
   },

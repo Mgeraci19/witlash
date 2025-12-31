@@ -1,6 +1,7 @@
 import { gsap } from "../../animations/gsapConfig";
 import type { AnimationDefinition } from "../core/types";
 import { animationRegistry } from "../core/AnimationRegistry";
+import { TIMINGS } from "../config";
 
 // Configuration (from useSlideSequence.ts)
 const SCALE = 0.65;
@@ -21,7 +22,7 @@ export const slideAnswersAnimation: AnimationDefinition = {
   id: "slide-answers",
   name: "Slide Answers to Corners",
   category: "battle",
-  duration: 0.5,
+  duration: TIMINGS.slideAnswers,
   canRunInParallel: false,
   priority: 10,
   tags: ["battle", "reveal"],
@@ -103,7 +104,7 @@ export const slideAnswersAnimation: AnimationDefinition = {
           x: leftOffsetX,
           y: leftOffsetY,
           scale: SCALE,
-          duration: 0.5,
+          duration: TIMINGS.slideAnswers,
           ease: "power2.out",
         },
         "slide"
@@ -116,7 +117,7 @@ export const slideAnswersAnimation: AnimationDefinition = {
           x: rightOffsetX,
           y: rightOffsetY,
           scale: SCALE,
-          duration: 0.5,
+          duration: TIMINGS.slideAnswers,
           ease: "power2.out",
         },
         "slide"
@@ -141,7 +142,7 @@ export const revealVotesAnimation: AnimationDefinition = {
   id: "reveal-votes",
   name: "Reveal Vote Counts",
   category: "battle",
-  duration: 0.6,
+  duration: TIMINGS.revealVotes,
   canRunInParallel: false,
   priority: 10,
   tags: ["battle", "reveal"],
@@ -154,16 +155,20 @@ export const revealVotesAnimation: AnimationDefinition = {
     const leftVotes = context.leftBattler?.voteCount || 0;
     const rightVotes = context.rightBattler?.voteCount || 0;
     const maxVotes = Math.max(leftVotes, rightVotes, 1);
-    const tickDuration = 0.6 / maxVotes;
+    const tickDuration = TIMINGS.revealVotes / maxVotes;
+
+    console.log(`[revealVotesAnimation] Starting - Left: ${leftVotes}, Right: ${rightVotes}, MaxVotes: ${maxVotes}`);
 
     // Tick up votes
     for (let i = 1; i <= maxVotes; i++) {
       timeline.call(
         () => {
-          context.setDisplayedVotes?.({
+          const newVotes = {
             left: Math.min(i, leftVotes),
             right: Math.min(i, rightVotes),
-          });
+          };
+          console.log(`[revealVotesAnimation] Tick ${i}/${maxVotes}:`, newVotes);
+          context.setDisplayedVotes?.(newVotes);
         },
         [],
         `+=${tickDuration}`

@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { GameState } from "@/lib/types";
 import { FighterHealthBar } from "./FighterHealthBar";
 import { AnimationOrchestrator } from "./animations/AnimationOrchestrator";
-import { BattleSide } from "./animations/registry/types";
+import { BattleSide } from "./animations/core/types";
 import { CornerManAssignment } from "./CornerManAssignment";
 import { useBattleData } from "@/hooks/useBattleData";
 
@@ -18,11 +18,12 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
 
   // Track battle completion for status display
   const [battleComplete, setBattleComplete] = useState(false);
+  const [koAnimationComplete, setKoAnimationComplete] = useState(false);
 
   // Local HP tracking for animation sync (animated values, not source of truth)
-  const [animatedLeftHp, setAnimatedLeftHp] = useState<number | null>(null);
-  const [animatedRightHp, setAnimatedRightHp] = useState<number | null>(null);
-  const hasInitializedHp = useRef(false);
+  // Initialize to 100 (default HP), will sync with actual player HP in useEffect
+  const [animatedLeftHp, setAnimatedLeftHp] = useState<number>(100);
+  const [animatedRightHp, setAnimatedRightHp] = useState<number>(100);
 
   // Track damage to show floating numbers
   const [leftShowDamage, setLeftShowDamage] = useState<number | undefined>(undefined);
@@ -45,6 +46,16 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
 
   // Fetch battle data from backend (SINGLE SOURCE OF TRUTH for damage)
   const battleData = useBattleData(game.currentPromptId);
+
+  // Debug: Log battle data
+  useEffect(() => {
+    console.log("========================================");
+    console.log("[BATTLE DATA] Prompt:", game.currentPromptId);
+    console.log("[BATTLE DATA] Loading:", battleData.isLoading);
+    console.log("[BATTLE DATA] Left Damage:", battleData.leftDamage, "Right Damage:", battleData.rightDamage);
+    console.log("[BATTLE DATA] Left Votes:", battleData.leftVotes, "Right Votes:", battleData.rightVotes);
+    console.log("========================================");
+  }, [game.currentPromptId, battleData]);
 
   // Memoize filtered arrays
   const currentSubmissions = useMemo(
@@ -92,7 +103,7 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     const voteCountsList = currentSubmissions.map((sub) => voteCounts[sub._id as string] || 0);
     const isTie = voteCountsList.length === 2 && voteCountsList[0] === voteCountsList[1];
 
-    return currentSubmissions.map((sub, index) => {
+    const result = currentSubmissions.map((sub, index) => {
       const player = game.players.find((p) => p._id === sub.playerId);
       const voteCount = voteCounts[sub._id as string] || 0;
       // Only mark as winner if NOT a tie and has max votes
@@ -107,6 +118,17 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
         side: (index === 0 ? "left" : "right") as "left" | "right",
       };
     });
+
+    console.log("========================================");
+    console.log("[BATTLERS DATA]", result.map(b => ({
+      name: b.player?.name,
+      voteCount: b.voteCount,
+      isWinner: b.isWinner,
+      voters: b.voters,
+    })));
+    console.log("========================================");
+
+    return result;
   }, [currentSubmissions, game.players, voteCounts, isReveal, totalVotes, maxVotes, votersBySubmission]);
 
   // Create stable identifier for corner man assignments (only changes on role transitions)
@@ -166,17 +188,26 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     console.log(`[HP BAR DATA] Right fighter: ${rightBattlerInfo.name}, winStreak: ${rightBattlerInfo.winStreak}`);
   }
 
-  // Initialize animated HP from player data
+  // Debug: Log what's being passed to AnimationOrchestrator
   useEffect(() => {
-    if (leftBattler?.player && rightBattler?.player) {
-      // Only initialize once per prompt, or when prompt changes
-      if (!hasInitializedHp.current) {
-        setAnimatedLeftHp(leftBattler.player.hp ?? 100);
-        setAnimatedRightHp(rightBattler.player.hp ?? 100);
-        hasInitializedHp.current = true;
-      }
+    if (leftBattlerInfo && rightBattlerInfo) {
+      console.log("========================================");
+      console.log("[PASSING TO ANIMATOR]");
+      console.log("Left:", leftBattlerInfo.name, "- Votes:", leftBattlerInfo.voteCount, "- isWinner:", leftBattlerInfo.isWinner, "- Damage:", battleData.leftDamage);
+      console.log("Right:", rightBattlerInfo.name, "- Votes:", rightBattlerInfo.voteCount, "- isWinner:", rightBattlerInfo.isWinner, "- Damage:", battleData.rightDamage);
+      console.log("========================================");
     }
-  }, [leftBattler?.player, rightBattler?.player]);
+  }, [leftBattlerInfo, rightBattlerInfo, battleData]);
+
+  // Sync animated HP when battlers change (new players in battle)
+  useEffect(() => {
+    if (leftBattler?.player) {
+      setAnimatedLeftHp(leftBattler.player.hp ?? 100);
+    }
+    if (rightBattler?.player) {
+      setAnimatedRightHp(rightBattler.player.hp ?? 100);
+    }
+  }, [leftBattler?.player?._id, rightBattler?.player?._id]);
 
   // Watch for corner man assignments reactively (rounds 1 and 2 only)
   useEffect(() => {
@@ -184,10 +215,18 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
       currentRound: game.currentRound,
       roundStatus: game.roundStatus,
       promptId: game.currentPromptId,
+      koAnimationComplete,
     });
 
-    if (game.currentRound !== 1 && game.currentRound !== 2) {
-      console.log("[CORNER MAN CHECK] Skipping - not round 1 or 2");
+    // Corner man assignments happen in rounds 1, 2, and 3 (but not round 4 - sudden death)
+    if (game.currentRound === 4) {
+      console.log("[CORNER MAN CHECK] Skipping - round 4 (sudden death)");
+      return;
+    }
+
+    // WAIT for KO animation to complete before showing popup
+    if (!koAnimationComplete) {
+      console.log("[CORNER MAN CHECK] Waiting for KO animation to complete");
       return;
     }
 
@@ -236,25 +275,35 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     } else {
       console.log("[CORNER MAN CHECK] No new corner man assignments detected");
     }
-  }, [game.currentRound, game.roundStatus, cornerManIds, game.currentPromptId]);
+  }, [game.currentRound, game.roundStatus, cornerManIds, game.currentPromptId, koAnimationComplete, game.players]);
 
   // Callbacks
   const handleBattleComplete = useCallback(() => {
     console.log("[BATTLE COMPLETE] Marking battle as complete, round:", game.currentRound);
     setBattleComplete(true);
+    setKoAnimationComplete(true); // Signal animations are done
   }, [game.currentRound]);
 
   const handleDamageApplied = useCallback((side: BattleSide, damage: number) => {
+    console.log(`[HP UPDATE] ${side} taking ${damage} damage`);
     // Update local animated HP immediately for visual feedback
     if (side === "left") {
-      setAnimatedLeftHp((prev) => Math.max(0, (prev ?? 100) - damage));
+      setAnimatedLeftHp((prev) => {
+        const newHp = Math.max(0, prev - damage);
+        console.log(`[HP UPDATE] Left HP: ${prev} -> ${newHp}`);
+        return newHp;
+      });
       if (damage > 0) {
         setLeftShowDamage(damage);
         // Clear damage display after animation completes
         setTimeout(() => setLeftShowDamage(undefined), 600);
       }
     } else {
-      setAnimatedRightHp((prev) => Math.max(0, (prev ?? 100) - damage));
+      setAnimatedRightHp((prev) => {
+        const newHp = Math.max(0, prev - damage);
+        console.log(`[HP UPDATE] Right HP: ${prev} -> ${newHp}`);
+        return newHp;
+      });
       if (damage > 0) {
         setRightShowDamage(damage);
         // Clear damage display after animation completes
@@ -267,18 +316,19 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   useEffect(() => {
     console.log("[BATTLE RESET] New prompt, resetting battle state. Prompt ID:", game.currentPromptId);
     setBattleComplete(false);
-    hasInitializedHp.current = false;
+    setKoAnimationComplete(false); // Reset KO animation flag
     // Clear damage displays
     setLeftShowDamage(undefined);
     setRightShowDamage(undefined);
     // DON'T clear corner man assignment - it has its own timer and will hide itself
-    // Re-initialize HP from current player data
-    if (leftBattler?.player && rightBattler?.player) {
+    // Re-sync HP from current player data
+    if (leftBattler?.player) {
       setAnimatedLeftHp(leftBattler.player.hp ?? 100);
-      setAnimatedRightHp(rightBattler.player.hp ?? 100);
-      hasInitializedHp.current = true;
     }
-  }, [game.currentPromptId, leftBattler?.player, rightBattler?.player]);
+    if (rightBattler?.player) {
+      setAnimatedRightHp(rightBattler.player.hp ?? 100);
+    }
+  }, [game.currentPromptId, leftBattler?.player?._id, rightBattler?.player?._id]);
 
   // Reset corner man tracking when round changes
   useEffect(() => {
@@ -301,7 +351,7 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
           {leftBattler?.player && (
             <FighterHealthBar
               name={leftBattler.player.name}
-              hp={animatedLeftHp ?? leftBattler.player.hp ?? 0}
+              hp={animatedLeftHp}
               maxHp={leftBattler.player.maxHp || 100}
               side="left"
               isWinner={battleComplete && leftBattler.isWinner}
@@ -322,7 +372,7 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
           {rightBattler?.player && (
             <FighterHealthBar
               name={rightBattler.player.name}
-              hp={animatedRightHp ?? rightBattler.player.hp ?? 0}
+              hp={animatedRightHp}
               maxHp={rightBattler.player.maxHp || 100}
               side="right"
               isWinner={battleComplete && rightBattler.isWinner}

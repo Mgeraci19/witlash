@@ -1,0 +1,6 @@
+1. There is a weird animation with the answers that is intermittent during the rounds. Sometimes the answers start underneat the avatar and go to the middle. This is backwards of what I want. I think that there must be code for that animation somewhere. I want to keep it consistent and always have the answers go to the middle and then track to beneath the avatar, this happens about 80% of the time
+
+2. The win streak and badge calculation is bugged. I have a avatar displaying a 2 win streak when it only won one. I want the win streak to show in a different manner. Maybe like a special charging up. It should be clear that 3 wins in a row chargers the special/finisher. This should be a bar underneath health with 3 lines. These lines fill up afer each win. When the bar is full, it should say 'Special charged' and then the avatar should automatically KO the opponent. THis should have an accompanying animation overlay like 3 Win KO to let the loser know why they died
+
+3. There should be a combo counter above the health bar. It is always present even if it is zero. The combo will increase by 1 for every vote that you get. But if you ever fail to get a vote on a matchup your combo resets to 0. The combo should be used as a modifier to damage. I do not want it to have too much effect but it should be noticable. The combo should reset to 0 in between rounds
+

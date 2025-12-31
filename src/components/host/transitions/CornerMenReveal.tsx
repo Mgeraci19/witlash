@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "../animations/gsapConfig";
 import { AvatarFighter } from "../AvatarFighter";
 import { TransitionProps } from "./types";
@@ -15,10 +15,28 @@ export function CornerMenReveal({ gameState, onComplete }: TransitionProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const teamsContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldSkip, setShouldSkip] = useState(false);
+  const completedRef = useRef(false);
+
+  // Stable reference to onComplete to prevent unnecessary re-renders
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  // Safe completion handler that ensures we only complete once
+  const safeComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    // Use requestAnimationFrame to ensure we're fully out of React's render cycle
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onCompleteRef.current();
+      });
+    });
+  }, []);
 
   // Get all active fighters (not knocked out)
   const fighters = gameState.players
-    ?.filter((p) => p.role === "PLAYER" && !p.knockedOut) || [];
+    ?.filter((p) => p.role === "FIGHTER" && !p.knockedOut) || [];
 
   // Build teams: each fighter + their corner men
   const teams = fighters.map((fighter) => {
@@ -31,14 +49,27 @@ export function CornerMenReveal({ gameState, onComplete }: TransitionProps) {
     };
   });
 
+  // Handle skip case in useEffect to avoid setState during render
   useEffect(() => {
+    if (teams.length === 0 && !completedRef.current) {
+      setShouldSkip(true);
+      safeComplete();
+    }
+  }, [teams.length, safeComplete]);
+
+  useEffect(() => {
+    // Don't run animation if we're skipping or already completed
+    if (shouldSkip || teams.length === 0 || completedRef.current) {
+      return;
+    }
+
     if (!overlayRef.current || !titleRef.current || !teamsContainerRef.current) {
       return;
     }
 
     const tl = gsap.timeline({
       onComplete: () => {
-        setTimeout(onComplete, 300);
+        safeComplete();
       },
     });
 
@@ -79,11 +110,10 @@ export function CornerMenReveal({ gameState, onComplete }: TransitionProps) {
     return () => {
       tl.kill();
     };
-  }, [onComplete]);
+  }, [shouldSkip, teams.length, safeComplete]);
 
-  if (teams.length === 0) {
-    // No teams, skip transition
-    onComplete();
+  // Early return AFTER hooks, just render nothing if skipping
+  if (shouldSkip || teams.length === 0) {
     return null;
   }
 

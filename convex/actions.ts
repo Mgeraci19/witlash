@@ -43,6 +43,39 @@ export const submitAnswer = mutation({
         // Validate player session
         await validatePlayer(ctx, args.playerId, args.sessionToken);
 
+        // Validate prompt exists
+        const prompt = await ctx.db.get(args.promptId);
+        if (!prompt) {
+            console.warn(`[GAME] submitAnswer: Prompt ${args.promptId} not found`);
+            throw new Error("Prompt not found");
+        }
+
+        // Validate game is in PROMPTS phase
+        const game = await ctx.db.get(args.gameId);
+        if (!game) {
+            throw new Error("Game not found");
+        }
+        if (game.status !== "PROMPTS") {
+            console.warn(`[GAME] submitAnswer: Game ${args.gameId} is in ${game.status}, not PROMPTS`);
+            throw new Error("Cannot submit answers at this time");
+        }
+
+        // Validate player is assigned to this prompt
+        if (!prompt.assignedTo?.includes(args.playerId)) {
+            console.warn(`[GAME] submitAnswer: Player ${args.playerId} not assigned to prompt ${args.promptId}`);
+            throw new Error("You are not assigned to this prompt");
+        }
+
+        // Check for duplicate submission
+        const existingSubmission = await ctx.db.query("submissions")
+            .withIndex("by_prompt", q => q.eq("promptId", args.promptId))
+            .filter(q => q.eq(q.field("playerId"), args.playerId))
+            .first();
+        if (existingSubmission) {
+            console.warn(`[GAME] submitAnswer: Player ${args.playerId} already submitted for prompt ${args.promptId}`);
+            throw new Error("You have already submitted for this prompt");
+        }
+
         // Validate input
         const validatedText = validateTextInput(args.text, MAX_ANSWER_LENGTH, "Answer");
 
@@ -66,19 +99,29 @@ export const submitAnswer = mutation({
         }
 
         if (totalReceived >= totalExpected) {
+            // Re-fetch game to check isTransitioning (prevent race condition)
+            const currentGame = await ctx.db.get(args.gameId);
+            if (currentGame?.isTransitioning) {
+                console.log(`[GAME] Skipping transition - already transitioning`);
+                return;
+            }
+
+            // Set transitioning flag to prevent concurrent transitions
+            await ctx.db.patch(args.gameId, { isTransitioning: true });
+
             console.log(`[GAME] All answers received! Moving to VOTING.`);
 
             // For Round 4 (Sudden Death), we want the LATEST prompt (newest one created)
             // For other rounds, first prompt is fine
-            const game = await ctx.db.get(args.gameId);
-            const startPromptId = game?.currentRound === 4
+            const startPromptId = currentGame?.currentRound === 4
                 ? allPrompts[allPrompts.length - 1]._id  // Latest prompt in Round 4
                 : allPrompts[0]._id;                      // First prompt otherwise
 
             await ctx.db.patch(args.gameId, {
                 status: "VOTING",
                 currentPromptId: startPromptId,
-                roundStatus: "VOTING"
+                roundStatus: "VOTING",
+                isTransitioning: false  // Clear flag after transition
             });
             // BOTS VOTE
             const delay = 300 + Math.random() * 400;
@@ -98,6 +141,30 @@ export const submitVote = mutation({
     handler: async (ctx, args) => {
         // Validate player session
         const player = await validatePlayer(ctx, args.playerId, args.sessionToken);
+
+        // Validate prompt exists
+        const prompt = await ctx.db.get(args.promptId);
+        if (!prompt) {
+            console.warn(`[VOTE] Prompt ${args.promptId} not found`);
+            throw new Error("Prompt not found");
+        }
+
+        // Validate game is in VOTING phase
+        const game = await ctx.db.get(args.gameId);
+        if (!game) {
+            throw new Error("Game not found");
+        }
+        if (game.status !== "VOTING") {
+            console.warn(`[VOTE] Game ${args.gameId} is in ${game.status}, not VOTING`);
+            throw new Error("Cannot vote at this time");
+        }
+
+        // Validate submission exists and belongs to this prompt
+        const submission = await ctx.db.get(args.submissionId);
+        if (!submission || submission.promptId !== args.promptId) {
+            console.warn(`[VOTE] Submission ${args.submissionId} not found or doesn't belong to prompt ${args.promptId}`);
+            throw new Error("Invalid submission");
+        }
 
         console.log(`[VOTE] Player ${args.playerId} attempting to vote for submission ${args.submissionId} in prompt ${args.promptId}`);
 
@@ -153,8 +220,18 @@ export const submitVote = mutation({
         console.log(`[VOTE] Vote count: ${currentVotes.length}/${expectedVotes} (${ineligibleCount} ineligible players)`);
 
         if (currentVotes.length >= expectedVotes) {
+            // Re-fetch game to check isTransitioning (prevent race condition)
+            const currentGame = await ctx.db.get(args.gameId);
+            if (currentGame?.isTransitioning) {
+                console.log(`[VOTE] Skipping transition - already transitioning`);
+                return;
+            }
+
+            // Set transitioning flag
+            await ctx.db.patch(args.gameId, { isTransitioning: true });
+
             console.log(`[VOTE] 🎉 All votes received! Advancing to REVEAL`);
-            await ctx.db.patch(args.gameId, { roundStatus: "REVEAL" });
+            await ctx.db.patch(args.gameId, { roundStatus: "REVEAL", isTransitioning: false });
         }
     }
 });
@@ -207,10 +284,33 @@ export const submitAnswerForBot = mutation({
         if (cornerMan.role !== "CORNER_MAN") throw new Error("Only Corner Men can submit for bots");
         if (!cornerMan.teamId) throw new Error("No team assigned");
 
+        // Validate prompt exists
+        const prompt = await ctx.db.get(args.promptId);
+        if (!prompt) {
+            console.warn(`[GAME] submitAnswerForBot: Prompt ${args.promptId} not found`);
+            throw new Error("Prompt not found");
+        }
+
+        // Validate game is in PROMPTS phase
+        const game = await ctx.db.get(args.gameId);
+        if (!game) {
+            throw new Error("Game not found");
+        }
+        if (game.status !== "PROMPTS") {
+            console.warn(`[GAME] submitAnswerForBot: Game ${args.gameId} is in ${game.status}, not PROMPTS`);
+            throw new Error("Cannot submit answers at this time");
+        }
+
         // Get the captain (bot)
         const captain = await ctx.db.get(cornerMan.teamId);
         if (!captain) throw new Error("Captain not found");
         if (!captain.isBot) throw new Error("Can only submit for bot captains");
+
+        // Validate bot captain is assigned to this prompt
+        if (!prompt.assignedTo?.includes(cornerMan.teamId)) {
+            console.warn(`[GAME] submitAnswerForBot: Bot ${cornerMan.teamId} not assigned to prompt ${args.promptId}`);
+            throw new Error("Bot is not assigned to this prompt");
+        }
 
         // Validate input
         const validatedText = validateTextInput(args.text, MAX_ANSWER_LENGTH, "Answer");
@@ -245,17 +345,28 @@ export const submitAnswerForBot = mutation({
         }
 
         if (totalReceived >= totalExpected) {
+            // Re-fetch game to check isTransitioning (prevent race condition)
+            // Note: game was already fetched above for validation
+            const currentGame = await ctx.db.get(args.gameId);
+            if (currentGame?.isTransitioning) {
+                console.log(`[GAME] Skipping transition - already transitioning`);
+                return;
+            }
+
+            // Set transitioning flag to prevent concurrent transitions
+            await ctx.db.patch(args.gameId, { isTransitioning: true });
+
             console.log(`[GAME] All answers received! Moving to VOTING.`);
 
-            const game = await ctx.db.get(args.gameId);
-            const startPromptId = game?.currentRound === 4
+            const startPromptId = currentGame?.currentRound === 4
                 ? allPrompts[allPrompts.length - 1]._id
                 : allPrompts[0]._id;
 
             await ctx.db.patch(args.gameId, {
                 status: "VOTING",
                 currentPromptId: startPromptId,
-                roundStatus: "VOTING"
+                roundStatus: "VOTING",
+                isTransitioning: false  // Clear flag after transition
             });
 
             const delay = 300 + Math.random() * 400;

@@ -1,8 +1,12 @@
-import type { Timeline } from "gsap";
+import type { gsap } from "gsap";
 import type { GameState } from "@/lib/types";
 import type { BattlerInfo, BattleRefs, RevealPhase } from "../../battle/types";
-import type { BattleSide } from "../registry/types";
 import type { FighterState } from "../../AvatarFighter";
+
+/**
+ * BattleSide - Identifies which side of the battle
+ */
+export type BattleSide = "left" | "right";
 
 /**
  * AnimationContext - Data available to all animations
@@ -14,21 +18,30 @@ export interface AnimationContext {
   // DOM refs for animation targets
   refs: BattleRefs;
 
-  // Battle data
+  // Battle data (captured at sequence start - may be stale!)
   leftBattler: BattlerInfo | null;
   rightBattler: BattlerInfo | null;
   promptText: string;
   promptId?: string;
 
-  // Damage from backend (single source of truth)
+  // Damage from backend (captured at sequence start - may be stale!)
   leftDamage: number;
   rightDamage: number;
+
+  // Getter functions for CURRENT data (use these in animations that run after votes)
+  getLeftBattler?: () => BattlerInfo | null;
+  getRightBattler?: () => BattlerInfo | null;
+  getLeftDamage?: () => number;
+  getRightDamage?: () => number;
 
   // Answer order (which answer appears first/second)
   answerOrder: { first: "left" | "right"; second: "left" | "right" };
 
   // Full game state for conditional logic
   gameState: GameState;
+
+  // Function to get current game state (for reactive checks)
+  getGameState?: () => GameState;
 
   // Callbacks for state updates
   onDamageApplied?: (side: BattleSide, damage: number) => void;
@@ -72,7 +85,7 @@ export interface AnimationDefinition {
   tags?: string[];
 
   // Create GSAP timeline for this animation
-  create: (context: AnimationContext) => Timeline;
+  create: (context: AnimationContext) => gsap.core.Timeline;
 
   // Optional lifecycle hooks
   onStart?: (context: AnimationContext) => void;
