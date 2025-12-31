@@ -1,11 +1,60 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useMutation } from "convex/react";
 import { GameState } from "@/lib/types";
 import { FighterPlaceholder } from "./FighterPlaceholder";
+import { api } from "../../../convex/_generated/api";
+import { AUTO_ADVANCE } from "./animations/config";
 
 interface HostRoundResultsViewProps {
     game: GameState;
 }
 
 export function HostRoundResultsView({ game }: HostRoundResultsViewProps) {
+    const hostTriggerNextRound = useMutation(api.engine.hostTriggerNextRound);
+    const autoAdvanceScheduledRef = useRef(false);
+
+    // Log on mount
+    useEffect(() => {
+        console.log("[HostRoundResultsView] Mounted, round:", game.currentRound);
+        return () => console.log("[HostRoundResultsView] Unmounted");
+    }, [game.currentRound]);
+
+    // Auto-advance effect: trigger nextRound after delay
+    useEffect(() => {
+        console.log("[AUTO-ADVANCE ROUND] Effect running, scheduled:", autoAdvanceScheduledRef.current);
+
+        // Don't auto-advance if already scheduled
+        if (autoAdvanceScheduledRef.current) {
+            console.log("[AUTO-ADVANCE ROUND] Already scheduled, skipping");
+            return;
+        }
+
+        // Get host token from sessionStorage
+        const hostToken = sessionStorage.getItem("hostToken");
+        console.log("[AUTO-ADVANCE ROUND] hostToken:", hostToken ? "found" : "NOT FOUND");
+        if (!hostToken) {
+            console.log("[AUTO-ADVANCE ROUND] No host token found, skipping auto-advance");
+            return;
+        }
+
+        autoAdvanceScheduledRef.current = true;
+        console.log(`[AUTO-ADVANCE ROUND] Scheduling nextRound in ${AUTO_ADVANCE.ROUND_DELAY}ms for game ${game._id}`);
+
+        const timer = setTimeout(() => {
+            console.log("[AUTO-ADVANCE ROUND] Timer fired, triggering nextRound");
+            hostTriggerNextRound({ gameId: game._id, hostToken })
+                .then(() => console.log("[AUTO-ADVANCE ROUND] nextRound succeeded"))
+                .catch((err) => console.error("[AUTO-ADVANCE ROUND] Error:", err));
+        }, AUTO_ADVANCE.ROUND_DELAY);
+
+        return () => {
+            console.log("[AUTO-ADVANCE ROUND] Cleanup - clearing timer and resetting flag");
+            clearTimeout(timer);
+            autoAdvanceScheduledRef.current = false; // Reset so it can reschedule on remount
+        };
+    }, [game._id, hostTriggerNextRound]);
     // Sort fighters by HP (highest first), then filter out corner men
     const fighters = game.players
         .filter(p => p.role === "FIGHTER")
@@ -84,7 +133,7 @@ export function HostRoundResultsView({ game }: HostRoundResultsViewProps) {
 
             {/* Next Round Prompt */}
             <div className="mt-12 text-2xl text-gray-400 animate-pulse">
-                Waiting for VIP to start next round...
+                Next round starting soon...
             </div>
         </div>
     );

@@ -62,6 +62,12 @@ export class AnimationSequencer {
       }
 
       console.log(`[AnimationSequencer] Sequence complete: ${sequence.id}`);
+
+      // Call onComplete callback if provided
+      if (context.onComplete) {
+        console.log(`[AnimationSequencer] Calling onComplete callback`);
+        context.onComplete();
+      }
     } catch (error) {
       console.error(`[AnimationSequencer] Error in sequence ${sequence.id}:`, error);
       throw error;

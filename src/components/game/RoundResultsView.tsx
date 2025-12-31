@@ -3,6 +3,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { GameState } from "@/lib/types";
 import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { VipControlsPanel } from "./VipControlsPanel";
 
 interface RoundResultsViewProps {
     game: GameState;
@@ -38,22 +39,27 @@ export function RoundResultsView({ game, playerId, sessionToken, isVip, nextRoun
             </div>
 
             {isVip ? (
-                <Button
-                    id="next-round-button"
-                    data-testid="next-round-button"
-                    data-action="next-round"
-                    data-requires-vip="true"
-                    data-next-round={game.currentRound + 1}
-                    aria-label={`Start Round ${game.currentRound + 1}`}
-                    className="mt-8 w-full animate-pulse"
-                    size="lg"
-                    onClick={() => playerId && nextRound({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
-                >
-                    Start Round {game.currentRound + 1} ⏭️
-                </Button>
+                <VipControlsPanel>
+                    <Button
+                        id="next-round-button"
+                        data-testid="next-round-button"
+                        data-action="next-round"
+                        data-requires-vip="true"
+                        data-next-round={game.currentRound + 1}
+                        aria-label={`Start Round ${game.currentRound + 1}`}
+                        className="w-full"
+                        size="lg"
+                        onClick={() => playerId && nextRound({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
+                    >
+                        Skip to Round {game.currentRound + 1}
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                        Auto-advancing soon...
+                    </p>
+                </VipControlsPanel>
             ) : (
                 <div id="waiting-for-vip" className="mt-8 text-gray-500 italic">
-                    Waiting for VIP to start next round...
+                    Next round starting soon...
                 </div>
             )}
         </div>

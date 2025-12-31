@@ -5,8 +5,10 @@ import { GameState } from "@/lib/types";
 import { FighterHealthBar } from "./FighterHealthBar";
 import { AnimationOrchestrator } from "./animations/AnimationOrchestrator";
 import { BattleSide } from "./animations/core/types";
-import { CornerManAssignment } from "./CornerManAssignment";
 import { useBattleData } from "@/hooks/useBattleData";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { AUTO_ADVANCE } from "./animations/config";
 
 interface HostVotingViewProps {
   game: GameState;
@@ -18,7 +20,6 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
 
   // Track battle completion for status display
   const [battleComplete, setBattleComplete] = useState(false);
-  const [koAnimationComplete, setKoAnimationComplete] = useState(false);
 
   // Local HP tracking for animation sync (animated values, not source of truth)
   // Initialize to 100 (default HP), will sync with actual player HP in useEffect
@@ -29,17 +30,38 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   const [leftShowDamage, setLeftShowDamage] = useState<number | undefined>(undefined);
   const [rightShowDamage, setRightShowDamage] = useState<number | undefined>(undefined);
 
-  // Track corner man assignment display
-  const [showCornerManAssignment, setShowCornerManAssignment] = useState(false);
-  const [cornerManAssignment, setCornerManAssignment] = useState<{
-    cornerManName: string;
-    cornerManAvatar?: string;
-    champName: string;
-    champAvatar?: string;
-  } | null>(null);
+  // Auto-advance logic
+  const autoAdvanceScheduledRef = useRef(false);
+  const hostTriggerNextBattle = useMutation(api.engine.hostTriggerNextBattle);
 
-  // Track which players we've already shown corner man assignments for
-  const shownCornerManRef = useRef<Set<string>>(new Set());
+  // Auto-advance effect: trigger nextBattle after delay when battle is complete
+  useEffect(() => {
+    // Only proceed if battle is complete and we haven't scheduled yet
+    if (!battleComplete || autoAdvanceScheduledRef.current) {
+      return;
+    }
+
+    // Get host token from sessionStorage
+    const hostToken = sessionStorage.getItem("hostToken");
+    if (!hostToken) {
+      console.log("[AUTO-ADVANCE] No host token found, skipping auto-advance");
+      return;
+    }
+
+    autoAdvanceScheduledRef.current = true;
+    console.log(`[AUTO-ADVANCE] Scheduling nextBattle in ${AUTO_ADVANCE.BATTLE_DELAY}ms`);
+
+    const timer = setTimeout(() => {
+      console.log("[AUTO-ADVANCE] Triggering nextBattle");
+      hostTriggerNextBattle({ gameId: game._id, hostToken })
+        .catch((err) => console.error("[AUTO-ADVANCE] Error:", err));
+    }, AUTO_ADVANCE.BATTLE_DELAY);
+
+    return () => {
+      clearTimeout(timer);
+      autoAdvanceScheduledRef.current = false; // Reset so it can reschedule on remount
+    };
+  }, [battleComplete, game._id, hostTriggerNextBattle]);
 
   // Get current prompt and its submissions
   const currentPrompt = game.prompts?.find((p) => p._id === game.currentPromptId);
@@ -131,16 +153,6 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     return result;
   }, [currentSubmissions, game.players, voteCounts, isReveal, totalVotes, maxVotes, votersBySubmission]);
 
-  // Create stable identifier for corner man assignments (only changes on role transitions)
-  const cornerManIds = useMemo(
-    () => game.players
-      .filter(p => p.role === "CORNER_MAN" && p.teamId)
-      .map(p => `${p._id}:${p.teamId}`)
-      .sort()
-      .join(','),
-    [game.players]
-  );
-
   const leftBattler = battlers[0];
   const rightBattler = battlers[1];
 
@@ -209,79 +221,10 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
     }
   }, [leftBattler?.player?._id, rightBattler?.player?._id]);
 
-  // Watch for corner man assignments reactively (rounds 1 and 2 only)
-  useEffect(() => {
-    console.log("[CORNER MAN CHECK] Effect triggered", {
-      currentRound: game.currentRound,
-      roundStatus: game.roundStatus,
-      promptId: game.currentPromptId,
-      koAnimationComplete,
-    });
-
-    // Corner man assignments happen in rounds 1, 2, and 3 (but not round 4 - sudden death)
-    if (game.currentRound === 4) {
-      console.log("[CORNER MAN CHECK] Skipping - round 4 (sudden death)");
-      return;
-    }
-
-    // WAIT for KO animation to complete before showing popup
-    if (!koAnimationComplete) {
-      console.log("[CORNER MAN CHECK] Waiting for KO animation to complete");
-      return;
-    }
-
-    // Check ALL players for new corner man assignments
-    console.log("[CORNER MAN CHECK] All players roles:", game.players.map(p => ({
-      name: p.name,
-      role: p.role,
-      teamId: p.teamId,
-      hp: p.hp,
-      knockedOut: p.knockedOut,
-      winStreak: p.winStreak,
-    })));
-
-    // Check for COMBO KO (3 straight wins triggers instant KO)
-    game.players.forEach(p => {
-      if (p.knockedOut && (p.winStreak || 0) >= 3) {
-        console.log(`%c[COMBO KO!!!] ${p.name} achieved a 3-win combo and got instant KO!`, 'color: red; font-weight: bold; font-size: 16px');
-      }
-    });
-
-    // Find any player who just became a corner man and hasn't been shown yet
-    const newCornerMan = game.players.find(
-      (p) => p.role === "CORNER_MAN" && p.teamId && !shownCornerManRef.current.has(p._id)
-    );
-
-    if (newCornerMan) {
-      const champ = game.players.find((p) => p._id === newCornerMan.teamId);
-
-      console.log("[CORNER MAN DETECTED]", newCornerMan.name, "supporting", champ?.name);
-
-      if (champ) {
-        console.log("[CORNER MAN ANIMATION] Showing animation for:", newCornerMan.name, "→", champ.name);
-
-        // Mark this player as shown
-        shownCornerManRef.current.add(newCornerMan._id);
-
-        setCornerManAssignment({
-          cornerManName: newCornerMan.name,
-          cornerManAvatar: newCornerMan.avatar,
-          champName: champ.name,
-          champAvatar: champ.avatar,
-        });
-        // Show immediately
-        setShowCornerManAssignment(true);
-      }
-    } else {
-      console.log("[CORNER MAN CHECK] No new corner man assignments detected");
-    }
-  }, [game.currentRound, game.roundStatus, cornerManIds, game.currentPromptId, koAnimationComplete, game.players]);
-
   // Callbacks
   const handleBattleComplete = useCallback(() => {
     console.log("[BATTLE COMPLETE] Marking battle as complete, round:", game.currentRound);
     setBattleComplete(true);
-    setKoAnimationComplete(true); // Signal animations are done
   }, [game.currentRound]);
 
   const handleDamageApplied = useCallback((side: BattleSide, damage: number) => {
@@ -316,11 +259,9 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
   useEffect(() => {
     console.log("[BATTLE RESET] New prompt, resetting battle state. Prompt ID:", game.currentPromptId);
     setBattleComplete(false);
-    setKoAnimationComplete(false); // Reset KO animation flag
     // Clear damage displays
     setLeftShowDamage(undefined);
     setRightShowDamage(undefined);
-    // DON'T clear corner man assignment - it has its own timer and will hide itself
     // Re-sync HP from current player data
     if (leftBattler?.player) {
       setAnimatedLeftHp(leftBattler.player.hp ?? 100);
@@ -329,12 +270,6 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
       setAnimatedRightHp(rightBattler.player.hp ?? 100);
     }
   }, [game.currentPromptId, leftBattler?.player?._id, rightBattler?.player?._id]);
-
-  // Reset corner man tracking when round changes
-  useEffect(() => {
-    console.log("[ROUND CHANGE] Clearing shown corner man tracking. New round:", game.currentRound);
-    shownCornerManRef.current.clear();
-  }, [game.currentRound]);
 
   return (
     <div
@@ -408,17 +343,6 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
             {winner ? `${winner.player?.name} wins this round!` : "It's a tie!"}
           </div>
         </div>
-      )}
-
-      {/* Corner Man Assignment - Shows when a player gets KO'd and becomes a corner man */}
-      {showCornerManAssignment && cornerManAssignment && (
-        <CornerManAssignment
-          cornerManName={cornerManAssignment.cornerManName}
-          cornerManAvatar={cornerManAssignment.cornerManAvatar}
-          champName={cornerManAssignment.champName}
-          champAvatar={cornerManAssignment.champAvatar}
-          onComplete={() => setShowCornerManAssignment(false)}
-        />
       )}
 
       {/* Round 4 Writing Indicator - Shows during PROMPTS phase in Round 4 */}

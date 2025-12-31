@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useErrorState } from "@/hooks/useErrorState";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { useVotingLogic } from "@/hooks/useVotingLogic";
+import { VipControlsPanel } from "./VipControlsPanel";
 
 interface VotingViewProps {
     game: GameState;
@@ -176,14 +177,19 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
 
             {/* VIP Controls */}
             {isVip && votingState?.isReveal && (
-                <Button
-                    id="next-battle-button"
-                    onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
-                    className="w-full mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg"
-                    size="lg"
-                >
-                    Next Battle →
-                </Button>
+                <VipControlsPanel>
+                    <Button
+                        id="next-battle-button"
+                        onClick={() => playerId && nextBattle({ gameId: game._id, playerId, sessionToken }).catch((e) => showError("action-failed", (e as Error).message))}
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg"
+                        size="lg"
+                    >
+                        Skip to Next Battle
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                        Auto-advancing soon...
+                    </p>
+                </VipControlsPanel>
             )}
         </div>
     );

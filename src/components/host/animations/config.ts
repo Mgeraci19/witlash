@@ -6,6 +6,12 @@
 export const DEBUG_FAST_ANIMATIONS =
   process.env.NODE_ENV === "development" ? true : false;
 
+// Auto-advance delays (milliseconds) - triggered by host after animations complete
+export const AUTO_ADVANCE = {
+  BATTLE_DELAY: DEBUG_FAST_ANIMATIONS ? 500 : 2000,   // after battle animations
+  ROUND_DELAY: DEBUG_FAST_ANIMATIONS ? 2000 : 10000,  // after round results shown
+};
+
 // Individual timing presets (seconds)
 export const TIMINGS = {
   // Battle Entry (total ~7.4s normal, ~2s fast)
