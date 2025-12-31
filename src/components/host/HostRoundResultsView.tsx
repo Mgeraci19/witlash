@@ -76,7 +76,7 @@ export function HostRoundResultsView({ game }: HostRoundResultsViewProps) {
             </h1>
 
             <p className="text-2xl text-gray-400 mb-12">
-                {game.currentRound < (game.maxRounds || 4) ? "Prepare for the next round!" : "Final standings!"}
+                {game.currentRound < (game.maxRounds || 3) ? "Prepare for the next round!" : "Final standings!"}
             </p>
 
             {/* Standings */}

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useState } from "react";
 import { useErrorState } from "@/hooks/useErrorState";
@@ -11,12 +10,10 @@ interface FighterWritingViewProps {
     playerId: Id<"players"> | null;
     sessionToken: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    startGame: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string }) => Promise<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     submitAnswer: (args: { gameId: Id<"games">; playerId: Id<"players">; sessionToken: string; promptId: Id<"prompts">; text: string; attackType?: AttackType }) => Promise<any>;
 }
 
-export function FighterWritingView({ game, playerId, sessionToken, startGame, submitAnswer }: FighterWritingViewProps) {
+export function FighterWritingView({ game, playerId, sessionToken, submitAnswer }: FighterWritingViewProps) {
     const [submittedPrompts, setSubmittedPrompts] = useState<Set<string>>(new Set());
     const { error, showError, clearError } = useErrorState();
 
@@ -90,6 +87,7 @@ export function FighterWritingView({ game, playerId, sessionToken, startGame, su
                                 }}
                                 showError={showError}
                                 showAttackTypeSelector={isFinalRound}
+                                currentRound={game.currentRound}
                             />
 
                             {/* Display Suggestions if any */}

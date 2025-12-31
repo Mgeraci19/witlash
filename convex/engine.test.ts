@@ -599,7 +599,7 @@ describe("Pairing exclusion - Bug 10", () => {
     });
 
     // Create active player
-    const activePlayerId = await t.run(async (ctx) => {
+    await t.run(async (ctx) => {
       return await ctx.db.insert("players", {
         gameId,
         name: "ActivePlayer",

@@ -26,7 +26,7 @@ function createMockGame(playerCount: number = 2) {
     roomCode: "TEST",
     status: "LOBBY",
     currentRound: 1,
-    maxRounds: 4,
+    maxRounds: 3,
     players,
     messages: [],
     prompts: [],

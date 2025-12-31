@@ -8,7 +8,7 @@ This document describes how an LLM or automation agent can navigate and interact
 HOME (/) → LOBBY → PROMPTS (Writing) → VOTING → ROUND_RESULTS → Repeat or → RESULTS (Game Over)
 ```
 
-The game cycles through PROMPTS → VOTING → ROUND_RESULTS for each round (typically 4 rounds).
+The game cycles through PROMPTS → VOTING → ROUND_RESULTS for each round (3 rounds total).
 
 ---
 

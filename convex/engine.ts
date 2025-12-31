@@ -381,6 +381,8 @@ export const hostTriggerNextBattle = mutation({
 
         let nextPromptId = null;
 
+        // Find next prompt where no assigned player is knocked out
+        // EXCEPT in Semi-Finals (Round 2), allow the 4th prompt of a matchup to play as "bragging round"
         for (let i = currentIndex + 1; i < allPrompts.length; i++) {
             const p = allPrompts[i];
             const assignedIds = p.assignedTo || [];
@@ -389,6 +391,27 @@ export const hostTriggerNextBattle = mutation({
             if (!isMatchupDead) {
                 nextPromptId = p._id;
                 break;
+            } else if (game.currentRound === 2) {
+                // In Semi-Finals, check if this is the 4th (final) prompt for this matchup
+                const sameMatchupPrompts = allPrompts.filter(op =>
+                    op.assignedTo &&
+                    op.assignedTo.length === 2 &&
+                    assignedIds.length === 2 &&
+                    op.assignedTo[0] === assignedIds[0] &&
+                    op.assignedTo[1] === assignedIds[1]
+                );
+                const promptIndexInMatchup = sameMatchupPrompts.findIndex(op => op._id === p._id);
+
+                // If this is the 4th prompt (index 3) of the matchup, play it as bragging round
+                if (promptIndexInMatchup === 3) {
+                    console.log(`[SEMI-FINALS] Host auto-advance: Playing prompt 4 as BRAGGING ROUND for ${p._id}`);
+                    nextPromptId = p._id;
+                    break;
+                } else {
+                    console.log(`[HOST AUTO-ADVANCE] Skipping prompt ${p._id} because a player is knocked out.`);
+                }
+            } else {
+                console.log(`[HOST AUTO-ADVANCE] Skipping prompt ${p._id} because a player is knocked out.`);
             }
         }
 

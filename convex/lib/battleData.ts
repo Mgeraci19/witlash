@@ -1,6 +1,5 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
 
 /**
  * getBattleData - Returns all battle data for a prompt including calculated damage
@@ -99,10 +98,9 @@ function calculateBattleDamage({
   // Round multipliers (matches gameLogic.ts)
   const getRoundMultiplier = (round: number): number => {
     switch (round) {
-      case 1: return 1.0;   // 35 max damage
-      case 2: return 1.3;   // 45.5 max damage
-      case 3: return 1.0;   // 35 max damage
-      case 4: return 1.5;   // 52.5 max damage
+      case 1: return 1.0;   // 35 max damage (Main Round)
+      case 2: return 1.3;   // 45.5 max damage (Semi-Finals)
+      case 3: return 1.0;   // 35 max damage (Final)
       default: return 1.0;
     }
   };

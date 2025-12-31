@@ -30,8 +30,6 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
     // Use derived state from hook
     const {
         currentSubmissions,
-        currentVotes,
-        maxVotes,
         myVote,
         votingState,
         promptText,
@@ -95,7 +93,7 @@ export function VotingView({ game, playerId, sessionToken, isVip, submitVote, ne
                     <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold">The Answers</span>
                 </div>
 
-                {currentSubmissions.map((s, index) => {
+                {currentSubmissions.map((s) => {
                     const isMyVote = myVote?.submissionId === s._id;
                     const isMine = s.playerId === playerId;
 

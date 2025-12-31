@@ -38,7 +38,19 @@ export const autoAnswer = mutation({
         // Get game to check round for attack type selection
         const game = await ctx.db.get(args.gameId);
 
-        const text = `${player.name} ${BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)]}`;
+        // Get prompt to check for jab type (single word required)
+        const prompt = await ctx.db.get(args.promptId);
+
+        // Semi-Finals JAB: single word only
+        // Haymaker and other rounds: normal multi-word format
+        let text: string;
+        if (game?.currentRound === 2 && prompt?.promptType === "jab") {
+            // Single word for jab
+            text = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
+        } else {
+            // Normal format for haymaker and other rounds
+            text = `${player.name} ${BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)]}`;
+        }
 
         // In Round 3 (Final), bots pick random attack type
         const attackTypes: Array<"jab" | "haymaker" | "flyingKick"> = ["jab", "haymaker", "flyingKick"];
@@ -131,10 +143,21 @@ export const sendSuggestions = mutation({
                 // Generate 2-3 suggestions using BOT_WORDS
                 const numSuggestions = 2 + Math.floor(Math.random() * 2); // 2 or 3
 
+                // Get game to check round for jab (single word) vs haymaker (multi-word)
+                const game = await ctx.db.get(args.gameId);
+                const isJabPrompt = game?.currentRound === 2 && prompt.promptType === "jab";
+
                 for (let i = 0; i < numSuggestions; i++) {
-                    const word1 = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
-                    const word2 = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
-                    const suggestionText = `${word1} ${word2}`;
+                    let suggestionText: string;
+                    if (isJabPrompt) {
+                        // Single word for jab
+                        suggestionText = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
+                    } else {
+                        // Multi-word for haymaker and other rounds
+                        const word1 = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
+                        const word2 = BOT_WORDS[Math.floor(Math.random() * BOT_WORDS.length)];
+                        suggestionText = `${word1} ${word2}`;
+                    }
 
                     // Check if this exact suggestion already exists
                     const existingSuggestion = await ctx.db

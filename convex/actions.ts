@@ -86,7 +86,16 @@ export const submitAnswer = mutation({
         // Validate input
         const validatedText = validateTextInput(args.text, MAX_ANSWER_LENGTH, "Answer");
 
-        console.log(`[GAME] Player ${args.playerId} submitted answer for ${args.promptId}${args.attackType ? ` (${args.attackType})` : ''}`);
+        // Semi-Finals JAB enforcement: single word only
+        if (game.currentRound === 2 && prompt.promptType === "jab") {
+            const wordCount = validatedText.trim().split(/\s+/).length;
+            if (wordCount > 1) {
+                console.warn(`[GAME] JAB VIOLATION: Player ${args.playerId} tried to submit "${validatedText}" (${wordCount} words) for jab prompt`);
+                throw new Error("Jab answers must be a single word!");
+            }
+        }
+
+        console.log(`[GAME] Player ${args.playerId} submitted answer for ${args.promptId}${args.attackType ? ` (${args.attackType})` : ''}${prompt.promptType ? ` [${prompt.promptType}]` : ''}`);
         await ctx.db.insert("submissions", {
             promptId: args.promptId,
             playerId: args.playerId,
@@ -335,6 +344,15 @@ export const submitAnswerForBot = mutation({
         // Validate input
         const validatedText = validateTextInput(args.text, MAX_ANSWER_LENGTH, "Answer");
 
+        // Semi-Finals JAB enforcement: single word only
+        if (game.currentRound === 2 && prompt.promptType === "jab") {
+            const wordCount = validatedText.trim().split(/\s+/).length;
+            if (wordCount > 1) {
+                console.warn(`[GAME] JAB VIOLATION: Corner man ${cornerMan.name} tried to submit "${validatedText}" (${wordCount} words) for bot jab prompt`);
+                throw new Error("Jab answers must be a single word!");
+            }
+        }
+
         // Check if bot already submitted for this prompt
         const existingSubmission = await ctx.db.query("submissions")
             .withIndex("by_prompt", q => q.eq("promptId", args.promptId))
@@ -345,7 +363,7 @@ export const submitAnswerForBot = mutation({
             throw new Error("Bot has already submitted for this prompt");
         }
 
-        console.log(`[GAME] Corner man ${cornerMan.name} submitted answer for bot ${captain.name} on prompt ${args.promptId}${args.attackType ? ` (${args.attackType})` : ''}`);
+        console.log(`[GAME] Corner man ${cornerMan.name} submitted answer for bot ${captain.name} on prompt ${args.promptId}${args.attackType ? ` (${args.attackType})` : ''}${prompt.promptType ? ` [${prompt.promptType}]` : ''}`);
 
         // Submit as the BOT, not the corner man
         await ctx.db.insert("submissions", {

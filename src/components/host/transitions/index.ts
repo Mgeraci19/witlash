@@ -19,14 +19,12 @@ export * from "./types";
 // Transition components
 export { RoundStartTransition } from "./RoundStartTransition";
 export { SuddenDeathIntro } from "./SuddenDeathIntro";
-export { CornerMenReveal } from "./CornerMenReveal";
 export { TheCutReveal } from "./TheCutReveal";
 
 // Auto-register built-in transitions
 import { transitionRegistry } from "./transitionRegistry";
 import { RoundStartTransition } from "./RoundStartTransition";
 import { SuddenDeathIntro } from "./SuddenDeathIntro";
-import { CornerMenReveal } from "./CornerMenReveal";
 import { TheCutReveal } from "./TheCutReveal";
 
 /**

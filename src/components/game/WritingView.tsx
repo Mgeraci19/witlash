@@ -41,7 +41,6 @@ export function WritingView({ game, playerId, sessionToken, startGame, submitAns
             game={game}
             playerId={playerId}
             sessionToken={sessionToken}
-            startGame={startGame}
             submitAnswer={submitAnswer}
         />
     );

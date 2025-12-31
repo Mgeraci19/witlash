@@ -55,6 +55,8 @@ export default defineSchema({
     gameId: v.id("games"),
     text: v.string(),
     assignedTo: v.optional(v.array(v.id("players"))), // The 2 players who must answer this
+    // Semi-Finals prompt type: jab (prompts 1-3, +1 special bar) or haymaker (prompt 4, bragging round)
+    promptType: v.optional(v.union(v.literal("jab"), v.literal("haymaker"))),
   }).index("by_game", ["gameId"]),
 
   submissions: defineTable({

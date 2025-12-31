@@ -311,9 +311,19 @@ export function HostVotingView({ game, showWritingIndicator = false }: HostVotin
           )}
         </div>
 
-        {/* Center: Round indicator only */}
+        {/* Center: Round indicator and prompt type */}
         <div className="flex-1 text-center">
           <div className="text-2xl font-bold text-gray-300">Round {game.currentRound}</div>
+          {/* Semi-Finals (Round 2): Show JAB or HAYMAKER prompt type */}
+          {game.currentRound === 2 && currentPrompt?.promptType && (
+            <div className={`text-lg font-bold mt-1 ${
+              currentPrompt.promptType === "haymaker"
+                ? "text-orange-400"
+                : "text-blue-400"
+            }`}>
+              {currentPrompt.promptType === "haymaker" ? "🥊 HAYMAKER" : "👊 JAB"}
+            </div>
+          )}
         </div>
 
         {/* Right HP Bar */}

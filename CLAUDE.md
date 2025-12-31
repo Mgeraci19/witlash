@@ -27,7 +27,7 @@ npm run test:frontend # React component tests (15 tests)
 
 ### Game Flow
 ```
-LOBBY → PROMPTS → VOTING → ROUND_RESULTS → (repeat 4 rounds) → RESULTS
+LOBBY → PROMPTS → VOTING → ROUND_RESULTS → (repeat 3 rounds) → RESULTS
 ```
 
 ### Key Directories

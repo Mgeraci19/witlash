@@ -43,7 +43,7 @@ export const ATTACK_TYPES: AttackTypeInfo[] = [
 ];
 
 interface PromptCardProps {
-    prompt: { _id: Id<"prompts">; text: string };
+    prompt: { _id: Id<"prompts">; text: string; promptType?: "jab" | "haymaker" };
     initialValue: string;
     isDone: boolean;
     onSubmit: (text: string, attackType?: AttackType) => Promise<void>;
@@ -51,11 +51,21 @@ interface PromptCardProps {
     showError: (code: string, message: string) => void;
     /** Show attack type selector (only in Final round) */
     showAttackTypeSelector?: boolean;
+    /** Current round (used for Semi-Finals jab validation) */
+    currentRound?: number;
 }
 
-export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showError, showAttackTypeSelector }: PromptCardProps) {
+export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue, showError, showAttackTypeSelector, currentRound }: PromptCardProps) {
     const [value, setValue] = useState("");
     const [selectedAttackType, setSelectedAttackType] = useState<AttackType>("jab");
+
+    // Semi-Finals (Round 2) jab prompts require single word
+    const isSemiFinalsJab = currentRound === 2 && prompt.promptType === "jab";
+    const isSemiFinalsHaymaker = currentRound === 2 && prompt.promptType === "haymaker";
+
+    // Client-side validation for jab (single word)
+    const wordCount = value.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const isValidJabAnswer = !isSemiFinalsJab || wordCount <= 1;
 
     // Initialize with prefill on mount or when value is cleared
     useEffect(() => {
@@ -86,6 +96,19 @@ export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue,
         >
             <CardHeader>
                 <CardTitle id={`prompt-text-${promptIdSafe}`} className="text-lg">{prompt.text}</CardTitle>
+                {/* Semi-Finals prompt type indicator */}
+                {isSemiFinalsJab && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-blue-600 font-bold text-sm">👊 JAB</span>
+                        <span className="text-blue-500 text-xs">(Single word only!)</span>
+                    </div>
+                )}
+                {isSemiFinalsHaymaker && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-orange-600 font-bold text-sm">🥊 HAYMAKER</span>
+                        <span className="text-orange-500 text-xs">(Go wild!)</span>
+                    </div>
+                )}
             </CardHeader>
             <CardContent>
                 {isDone ? (
@@ -153,9 +176,10 @@ export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue,
                                 data-testid={`answer-input-${promptIdSafe}`}
                                 data-prompt-id={prompt._id}
                                 aria-label={`Your answer for: ${prompt.text}`}
-                                placeholder="Your answer..."
+                                placeholder={isSemiFinalsJab ? "One word only..." : "Your answer..."}
                                 value={value}
                                 onChange={(e) => setValue(e.target.value)}
+                                className={isSemiFinalsJab && !isValidJabAnswer ? "border-red-500" : ""}
                             />
                             <Button
                                 id={`submit-answer-${promptIdSafe}`}
@@ -165,11 +189,15 @@ export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue,
                                 data-has-value={value.trim().length > 0}
                                 data-attack-type={showAttackTypeSelector ? selectedAttackType : undefined}
                                 aria-label={`Submit answer for: ${prompt.text}`}
-                                // VALIDATION: Disable if empty or whitespace only
-                                disabled={value.trim().length === 0}
+                                // VALIDATION: Disable if empty, whitespace only, or invalid jab (multi-word)
+                                disabled={value.trim().length === 0 || !isValidJabAnswer}
                                 onClick={() => {
                                     const trimmed = value.trim();
                                     if (trimmed.length === 0) return;
+                                    if (!isValidJabAnswer) {
+                                        showError("jab-validation", "Jab answers must be a single word!");
+                                        return;
+                                    }
                                     onSubmit(trimmed, showAttackTypeSelector ? selectedAttackType : undefined)
                                         .catch((e) => showError("submit-failed", (e as Error).message));
                                 }}
@@ -177,6 +205,10 @@ export function PromptCard({ prompt, initialValue, isDone, onSubmit, onSetValue,
                                 Submit
                             </Button>
                         </div>
+                        {/* Jab validation warning */}
+                        {isSemiFinalsJab && !isValidJabAnswer && (
+                            <p className="text-red-500 text-xs mt-1">⚠️ Jab answers must be a single word! ({wordCount} words detected)</p>
+                        )}
                     </div>
                 )}
             </CardContent>

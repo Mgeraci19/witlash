@@ -42,10 +42,3 @@ export class PromptManager {
         return Array.from(this.usedIndices);
     }
 }
-
-// Deprecated helpers (kept for safety until phases.ts is updated in next step)
-export function getAvailableIndices(usedPromptIndices: number[]) {
-    const mgr = new PromptManager(usedPromptIndices);
-    return { availableIndices: [], usedIndices: mgr.getUsedIndices() }; // API changed, but we will replace usages anyway.
-}
-

@@ -285,8 +285,17 @@ export async function setupSemiFinals(ctx: MutationCtx, gameId: Id<"games">, sem
 
         const promptsTexts = promptManager.pick(PROMPTS_PER_MATCH);
 
-        for (const text of promptsTexts) {
-            const promptId = await ctx.db.insert("prompts", { gameId, text, assignedTo: [p1._id, p2._id] });
+        // Create prompts with types: prompts 1-3 are "jab", prompt 4 is "haymaker" (bragging round)
+        for (let i = 0; i < promptsTexts.length; i++) {
+            const text = promptsTexts[i];
+            const promptType = i < 3 ? "jab" : "haymaker"; // First 3 are jabs, 4th is haymaker
+            console.log(`[SEMI-FINALS] Creating prompt ${i + 1}/${PROMPTS_PER_MATCH} (${promptType}): "${text.substring(0, 30)}..."`);
+            const promptId = await ctx.db.insert("prompts", {
+                gameId,
+                text,
+                assignedTo: [p1._id, p2._id],
+                promptType: promptType as "jab" | "haymaker"
+            });
             await scheduleBotsToAnswer(ctx, gameId, p1, p2, promptId, allPlayers);
         }
     }

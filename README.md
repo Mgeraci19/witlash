@@ -4,11 +4,11 @@ A multiplayer battle-of-wits game where players compete in SmackTalk battles! An
 
 ## 🎯 Game Overview
 
-SmackTalk is a 4-round elimination game for 4-8 players:
+SmackTalk is a 3-round elimination game for 8-12 players:
 
-- **Round 1-2**: Series Matchups - Players answer prompts and vote. Losers become "Corner Men" for winners
-- **Round 3**: The Gauntlet - Remaining fighters battle it out
-- **Round 4**: Final Showdown - The last two standing fight in sudden death mode
+- **Round 1 (Main Round)**: Paired matchups with 5 prompts each. Winners build special bar, first to 3 wins = instant KO
+- **Round 2 (Semi-Finals)**: Top 4 by HP advance. Special bar battles, no HP damage
+- **Round 3 (Final)**: Epic 1v1 showdown with 200 HP each, attack type selection (Jab/Haymaker/Flying Kick)
 
 ## 🚀 Live Demo
 
@@ -57,9 +57,9 @@ Play now at: [https://mgeraci19.github.io/SmackTalk/](https://mgeraci19.github.i
 - Human corner men can control bot captains
 
 ### HP & Damage System
-- 100 HP starting health
+- 100 HP starting health (200 HP in Final round)
 - Proportional damage based on voting results
-- Sudden death with 1.5x multiplier in Round 4
+- Special bar: 3 wins = instant KO
 
 ## 📦 Local Development
 

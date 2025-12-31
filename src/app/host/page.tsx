@@ -93,11 +93,11 @@ function HostContent() {
                 <HostLobbyView game={game} />
             )}
 
-            {game.status === "PROMPTS" && game.currentRound !== 4 && (
+            {game.status === "PROMPTS" && game.currentRound !== 3 && (
                 <HostWritingView game={game} />
             )}
 
-            {game.status === "PROMPTS" && game.currentRound === 4 && (
+            {game.status === "PROMPTS" && game.currentRound === 3 && (
                 <HostVotingView game={game} showWritingIndicator={true} />
             )}
 

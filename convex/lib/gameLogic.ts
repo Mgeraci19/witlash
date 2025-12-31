@@ -134,8 +134,7 @@ async function handleTie(
     } else if (currentRound === 3) {
         await handleFinal(ctx, gameId, winnerWithPlayer, loserWithPlayer, DAMAGE_CAP, totalVotes, submissions);
     } else {
-        console.warn(`[TIE] Unknown round ${currentRound}, using legacy damage calculation`);
-        await handleLegacyRound(ctx, gameId, winnerWithPlayer, loserWithPlayer, currentRound, DAMAGE_CAP, totalVotes, submissions);
+        throw new Error(`[TIE] Invalid round number: ${currentRound}. Game only supports rounds 1-3.`);
     }
 }
 
@@ -179,9 +178,7 @@ async function handleNonTie(
     } else if (currentRound === 3) {
         await handleFinal(ctx, gameId, winnerWithPlayer, loserWithPlayer, DAMAGE_CAP, totalVotes, submissions);
     } else {
-        // Fallback to legacy behavior for any other round
-        console.warn(`[GAME] Unknown round ${currentRound}, using legacy damage calculation`);
-        await handleLegacyRound(ctx, gameId, winnerWithPlayer, loserWithPlayer, currentRound, DAMAGE_CAP, totalVotes, submissions);
+        throw new Error(`[GAME] Invalid round number: ${currentRound}. Game only supports rounds 1-3.`);
     }
 }
 
@@ -460,36 +457,3 @@ async function handlePostKOHealing(
     });
 }
 
-/**
- * LEGACY ROUND HANDLER (fallback for any unexpected round numbers)
- * Uses original damage calculation
- */
-async function handleLegacyRound(
-    ctx: MutationCtx,
-    _gameId: Id<"games">,
-    winner: { sub: Doc<"submissions">; votesFor: number; player: Doc<"players"> },
-    loser: { sub: Doc<"submissions">; votesFor: number; player: Doc<"players"> },
-    _currentRound: number,
-    DAMAGE_CAP: number,
-    totalVotes: number,
-    _submissions: Doc<"submissions">[]
-) {
-    const votesAgainst = totalVotes - loser.votesFor;
-    const damage = Math.floor((votesAgainst / totalVotes) * DAMAGE_CAP);
-
-    const loserCurrentHp = sanitizeHP(loser.player.hp);
-    const newLoserHp = Math.max(0, loserCurrentHp - damage);
-    const knockedOut = newLoserHp === 0;
-
-    console.log(`[LEGACY] ${loser.player.name}: ${loserCurrentHp} HP - ${damage} damage = ${newLoserHp} HP`);
-
-    await ctx.db.patch(winner.player._id, {
-        winStreak: (winner.player.winStreak || 0) + 1
-    });
-
-    await ctx.db.patch(loser.player._id, {
-        hp: newLoserHp,
-        knockedOut,
-        winStreak: 0
-    });
-}
