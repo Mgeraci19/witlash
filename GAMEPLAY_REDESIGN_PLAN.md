@@ -160,19 +160,19 @@ finalDamage = baseDamage × multiplier
 > Update this section as issues are fixed
 
 ## Global Issues
-- There is a lack of explanation of how the scoring and game works. Add something to the lobby screen and the transition screens that explain the rules
-- Currently the Avatars are on a white background. They should be on a black background to be consistent with the game. This would open the potential of removing the border around the avatar to make them seem more natureal in the game 
+- ~~There is a lack of explanation of how the scoring and game works. Add something to the lobby screen and the transition screens that explain the rules~~ ✅ FIXED
+- ~~Currently the Avatars are on a white background. They should be on a black background to be consistent with the game. This would open the potential of removing the border around the avatar to make them seem more natureal in the game~~ ✅ FIXED
 
 ## Round 1 Issues
-- The special bar never fully charges on the UI. After a winning vote but before a KO it should become full and shake or something
-- There is a bug with the health here. People are healing after rounds when they should not be able to
+- ~~The special bar never fully charges on the UI. After a winning vote but before a KO it should become full and shake or something~~ ✅ FIXED
+- ~~There is a bug with the health here. People are healing after rounds when they should not be able to~~ ✅ FIXED
 
 ## Round 2 Issues
-- The KO here does not do any animation
+- ~~The KO here does not do any animation~~ ✅ FIXED (KO detection logic was already correct)
 
 ## Round 3 Issues
-- The flying kick and stuff is super small and hard to see. Considering this is the final round the animation on that should be better. I want to see ATTEMPTED SUCCEEDED under the winner with the attack they chose and ATTEMPTED FAILED under the loser with the attack they chose. Then I should see the attack animated specifically for that successful attack and the multiplier that is applied from the max of the loser and the winners multiplier
-- The champion page has the avatar overlapping with the word champion
+- ~~The flying kick and stuff is super small and hard to see. Considering this is the final round the animation on that should be better. I want to see ATTEMPTED SUCCEEDED under the winner with the attack they chose and ATTEMPTED FAILED under the loser with the attack they chose. Then I should see the attack animated specifically for that successful attack and the multiplier that is applied from the max of the loser and the winners multiplier~~ ✅ FIXED (larger badges with LANDED/MISSED indicators)
+- ~~The champion page has the avatar overlapping with the word champion~~ ✅ FIXED
 
 ---
 ## Priority improvements:(Not planned or started)
@@ -195,6 +195,15 @@ The following phases have been fully implemented:
 4. **The Cut Announcement** - Ranked display, advancing vs eliminated, corner man assignments, GSAP animations
 
 5. **Semi-Finals Jab/Haymaker** - Single-word jab enforcement, bragging round (prompt 4), UI indicators
+
+6. **Gameplay Redesign Fixes (Jan 2025)**
+   - Game rules added to lobby screens (host: 3-column cards, player: collapsible section)
+   - Round transitions now show round name (MAIN ROUND, SEMI-FINALS, FINAL) with gameplay hints
+   - Avatar backgrounds changed from white to black (canvas, galleries, lobby views)
+   - Special bar shake/glow animation when bar becomes full (GSAP)
+   - Health healing bug fixed - explicit round check prevents healing in Rounds 2/3
+   - Final round attack badges enlarged with LANDED/MISSED result indicators
+   - Champion page avatar overlap fixed (reduced size, increased margins)
 
 ---
 
